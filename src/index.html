@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lang</title>
+	<!-- <script src="public/htmx.min.js"></script> -->
+	<script src="https://unpkg.com/htmx.org@2.0.1" integrity="sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/" crossorigin="anonymous"></script>
+	<!-- <script src="sse.js"></script> -->
+	<script src="https://unpkg.com/htmx-ext-sse@2.2.0/sse.js"></script>
+  </head>
+  <body>
+    <div id="app">
+		<button hx-get="/create-room" hx-trigger="click" hx-target="#app" hx-swap="innerHTML">Create Room</button>
+		<!-- <div hx-ext="sse" sse-connect="/listen/123">
+			<div sse-swap="event1">Old Event1</div>
+			<div sse-swap="event2">Old Event2</div>
+		</div> -->
+	</div>
+  </body>
+</html>

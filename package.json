@@ -1,15 +1,18 @@
 {
-  "name": "lang-htmx",
-  "version": "1.0.50",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
-  },
-  "dependencies": {
-    "elysia": "latest"
-  },
-  "devDependencies": {
-    "bun-types": "latest"
-  },
-  "module": "src/index.js"
+	"name": "lang-htmx",
+	"version": "0.0.0",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "bun run --watch src/index.tsx"
+	},
+	"dependencies": {
+		"@elysiajs/html": "^1.1.0",
+		"elysia": "latest",
+		"fastest-levenshtein": "^1.0.16"
+	},
+	"devDependencies": {
+		"@elysiajs/eden": "^1.1.2",
+		"bun-types": "latest"
+	},
+	"module": "src/index.js"
 }
