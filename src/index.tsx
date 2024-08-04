@@ -419,7 +419,7 @@ let app = new Elysia()
 		);
 	});
 
-setTimeout(() => (app = app.listen(3002)), 1000);
+setTimeout(() => (app = app.listen(3000)));
 
 const generatedRoutes = new Set();
 export function addBaseRoute(
