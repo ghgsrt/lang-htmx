@@ -93,7 +93,8 @@ em {
 	align-items: center;
 	justify-content: space-between;
 	overflow: hidden;
-	height: 100vh;
+	/* height: 100vh; */
+	height: 100dvh;
 	width: var(--width);
 	max-width: var(--width);
 	margin: 0 auto;
@@ -198,7 +199,8 @@ input + button {
 	align-self: center;
 }
 
-.header, .footer {
+.header,
+.footer {
 	width: fit-content;
 	color: var(--clr-text-disabled);
 	font-size: 0.75rem;
