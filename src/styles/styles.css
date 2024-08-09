@@ -108,7 +108,7 @@ em {
 }
 
 button {
-	border: 2px solid var(--clr-foreground);
+	border: 0.125rem solid var(--clr-foreground);
 	/* background: var(--clr-background) !important; */
 	outline: none;
 	/* border-radius: 0.25rem; */
@@ -295,7 +295,7 @@ input + button {
 	min-height: 1rem;
 	display: flex;
 	background-color: var(--clr-foreground) !important;
-	/* border: 2px solid var(--clr-foreground); */
+	/* border: 0.125rem solid var(--clr-foreground); */
 	padding-top: 0.25rem;
 	padding-left: 0.25rem;
 	border-radius: 10px;
@@ -334,7 +334,7 @@ input + button {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	/* border: 2px solid var(--clr-foreground); */
+	/* border: 0.125rem solid var(--clr-foreground); */
 	width: fit-content;
 	max-width: 100%;
 	height: fit-content;
@@ -360,7 +360,7 @@ input + button {
 	color: var(--clr-background);
 	z-index: 1000000000;
 	transform: translateX(-0.0625rem);
-	/* border-left: 2px solid var(--clr-background);
+	/* border-left: 0.125rem solid var(--clr-background);
 	border-top: 100% solid var(--clr-background); */
 }
 .multiselect-selected button {
@@ -391,7 +391,7 @@ input + button {
 	overflow-x: hidden;
 	border-radius: 10px;
 	outline: 0.0625rem solid var(--clr-background);
-	/* border: 2px solid var(--clr-foreground); */
+	/* border: 0.125rem solid var(--clr-foreground); */
 	padding: 0.25rem;
 	z-index: 100000;
 	user-select: none;
@@ -724,7 +724,7 @@ section[title='Actors'] > div {
 }
 
 :is(.actor-item, .chat-actor-item):has(> input:checked) .actor-portrait {
-	border: 2px solid var(--clr-accent);
+	border: 0.125rem solid var(--clr-accent);
 }
 
 .chat-message {
