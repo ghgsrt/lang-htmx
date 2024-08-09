@@ -1,15 +1,5 @@
-# Elysia with Bun runtime
+# Language Locked Chat
 
-## Getting Started
-To get started with this template, simply paste this command into your terminal:
-```bash
-bun create elysia ./elysia-example
-```
+A chat application where users can only see messages in languages known by their currently selected 'actor'. Created to facilitate Dungeons and Dragons games, making in-game language matter a bit more. Also, for fun, created using as little client-side JavaScript as possible.
 
-## Development
-To start the development server run:
-```bash
-bun run dev
-```
-
-Open http://localhost:3000/ with your browser to see the result.
+Backend will likely be rewritten in Go to hopefully save on server costs.
