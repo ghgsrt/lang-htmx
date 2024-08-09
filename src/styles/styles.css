@@ -29,7 +29,7 @@
 }
 
 ::-webkit-scrollbar {
-	width: 1px;
+	width: 0.0625rem;
 	height: 4px;
 	margin-left: 4px;
 }
@@ -160,7 +160,7 @@ input {
 	cursor: text;
 	transition: outline 0.1s;
 	outline: none;
-	border: 1px solid var(--clr-background);
+	border: 0.0625rem solid var(--clr-background);
 }
 
 input[type='file']::file-selector-button {
@@ -168,7 +168,7 @@ input[type='file']::file-selector-button {
 }
 
 input:focus {
-	border: 1px solid var(--clr-accent);
+	border: 0.0625rem solid var(--clr-accent);
 }
 
 input:has(+ button) {
@@ -222,7 +222,7 @@ input + button {
 }
 .error {
 	color: var(--clr-error);
-	border: 1px solid var(--clr-error);
+	border: 0.0625rem solid var(--clr-error);
 }
 
 .editable {
@@ -328,7 +328,7 @@ input + button {
 	margin-top: 0;
 }
 .multiselect:has(:focus) {
-	outline: 1px solid var(--clr-accent);
+	outline: 0.0625rem solid var(--clr-accent);
 }
 .multiselect-selected {
 	display: flex;
@@ -355,11 +355,11 @@ input + button {
 }
 .multiselect-selected .vr {
 	height: calc(var(--fs-small) * 1.75);
-	width: 1px;
+	width: 0.0625rem;
 	background-color: var(--clr-foreground) !important;
 	color: var(--clr-background);
 	z-index: 1000000000;
-	transform: translateX(-1px);
+	transform: translateX(-0.0625rem);
 	/* border-left: 2px solid var(--clr-background);
 	border-top: 100% solid var(--clr-background); */
 }
@@ -390,7 +390,7 @@ input + button {
 	overflow-y: auto;
 	overflow-x: hidden;
 	border-radius: 10px;
-	outline: 1px solid var(--clr-background);
+	outline: 0.0625rem solid var(--clr-background);
 	/* border: 2px solid var(--clr-foreground); */
 	padding: 0.25rem;
 	z-index: 100000;
@@ -455,7 +455,7 @@ input + button {
 	flex: 1;
 	/* height: 0px; */
 	border: none;
-	border-bottom: 1px solid var(--clr-accent);
+	border-bottom: 0.0625rem solid var(--clr-accent);
 	/* border-radius: 10px; */
 	border-bottom-left-radius: 0 !important;
 	border-bottom-right-radius: 0 !important;
@@ -468,7 +468,7 @@ input + button {
 	border-right: none;
 }
 .tab.selected {
-	border: 1px solid var(--clr-accent);
+	border: 0.0625rem solid var(--clr-accent);
 	border-bottom: none;
 	color: var(--clr-accent);
 	z-index: 100;
@@ -478,7 +478,7 @@ input + button {
 	flex: 1;
 	height: 0px;
 	overflow-y: auto;
-	/* border: 1px solid var(--clr-accent); */
+	/* border: 0.0625rem solid var(--clr-accent); */
 	border-top: none;
 	/* padding: 0.25rem; */
 	border-bottom-left-radius: 10px;
@@ -568,11 +568,11 @@ section[title='Chat'] > :first-child {
 }
 .active-actors:nth-of-type(1) .actor-portrait {
 	margin-right: 0.5rem;
-	/* border-right: 1px solid var(--clr-foreground); */
+	/* border-right: 0.0625rem solid var(--clr-foreground); */
 }
 .active-actors:nth-of-type(2) .actor-portrait {
 	margin-left: 0.5rem;
-	/* border-left: 1px solid var(--clr-foreground); */
+	/* border-left: 0.0625rem solid var(--clr-foreground); */
 }
 .active-actors .actor-link {
 	flex: 1;
@@ -625,7 +625,7 @@ section[title='Chat'] > :first-child {
 	display: none;
 	width: fit-content;
 	position: absolute;
-	border: 1px solid var(--clr-accent);
+	border: 0.0625rem solid var(--clr-accent);
 	border-radius: 0.25rem;
 	padding: 0.25rem;
 	height: fit-content;
@@ -758,7 +758,7 @@ section[title='Actors'] > div {
 }
 
 .chat-group {
-	border-top: 1px solid var(--clr-foreground);
+	border-top: 0.0625rem solid var(--clr-foreground);
 	position: relative;
 	padding-top: 0.5rem;
 	margin-top: 0.5rem;
