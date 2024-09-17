@@ -1,6 +1,6 @@
 import Html from '@kitajs/html';
-import { addBaseRoute } from '..';
 import { base } from '../controller';
+import { Safe } from '../types/types';
 
 const iota = () => {
 	let i = 0;
@@ -11,60 +11,55 @@ const groupIota = iota();
 export const dropMap: Record<number, JSX.Element> = {};
 export const dropGroups: Record<number, number> = {};
 
-export function TabGroup({
-	tabs,
+export function Tab({
 	title,
-	selected,
-	group,
+	children,
 }: {
-	tabs: () => Record<string, JSX.Element>;
-	title?: string;
-	selected?: number;
-	group?: number;
+	title: string;
+	children: JSX.Element;
 }) {
-	const groupId = group ?? groupIota();
-	const _tabs = tabs();
+	return [title, children] as unknown as JSX.Element;
+}
 
-	if (group === undefined)
-		addBaseRoute('get', base.URL.generated.tab(groupId), ({ params }) => (
-			<TabGroup
-				tabs={tabs}
-				title={title}
-				selected={Number(params.tab!)}
-				group={groupId}
-			/>
-		));
+export async function TabGroup({
+	id,
+	title,
+	children,
+}: {
+	id: string;
+	title?: string;
+	children: JSX.Element[];
+}) {
+	const _children: [string, JSX.Element][] = (
+		Array.isArray(children[0]) ? children : [children]
+	) as [string, JSX.Element][];
 
 	return (
-		<section
-			class='tab-group'
-			title={title ?? ''}
-			hx-target='this'
-			hx-swap='outerHTML'
-		>
-			<summary id={`tab-${groupId}-header`} class='tab-header' role='tablist'>
-				{Object.keys(_tabs).map((tab, i) => (
+		<section class='tab-group' data-title={title ?? ''} hx-swap='innerHTML'>
+			<summary id={`tab-${id}-header`} class='tab-header' role='tablist'>
+				{_children.map(([title], i) => (
 					<button
-						hx-get={base.URL.generated.tab(groupId, i)}
-						hx-trigger='click'
-						class={`tab ${i === (selected ?? 0) ? 'selected' : ''}`}
+						data-title={title}
+						class={`tab ${i === 0 ? 'selected' : ''}`}
+						onclick={`selectTab(${id}, ${i});`}
 						role='tab'
-						aria-selected={i === selected}
-						aria-controls={`tab-${groupId}-content`}
+						safe
 					>
-						{tab}
+						{title}
 					</button>
 				))}
 			</summary>
 			<br />
-			<article
-				id={`tab-${groupId}-content`}
-				class='tab-content'
-				role='tabpanel'
-				hx-swap='innerHTML'
-			>
-				{Object.values(_tabs)[selected ?? 0]}
-			</article>
+			{_children.map(([title, child], i) => (
+				<article
+					data-title={title}
+					class={`tab-content ${i === 0 ? 'selected' : ''}`}
+					role='tabpanel'
+					hx-swap='innerHTML'
+				>
+					{child as Safe}
+				</article>
+			))}
 		</section>
 	);
 }
@@ -89,8 +84,8 @@ export function DropDown({
 
 	return (
 		<details id={`dropdown-${id}`} class={`dropdown absolute`} open={isOpen}>
-			<summary>{title}</summary>
-			<div>{children}</div>
+			<summary safe>{title}</summary>
+			<div>{children as Safe}</div>
 		</details>
 	);
 }

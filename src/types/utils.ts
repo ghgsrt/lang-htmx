@@ -1,9 +1,18 @@
 import { treaty } from '@elysiajs/eden';
 import Elysia from 'elysia';
 
-export type ArrayKeys<T> = {
+export type ArrayKeys<T extends Record<string, any>> = {
 	[K in keyof T]: T[K] extends any[] ? K : never;
 }[keyof T];
+export type ObjectKeys<T extends Record<string, any>> = {
+	[K in Exclude<keyof T, ArrayKeys<T>>]: T[K] extends Record<string, any>
+		? K
+		: never;
+}[Exclude<keyof T, ArrayKeys<T>>];
+export type PrimitiveKeys<T extends Record<string, any>> = Exclude<
+	keyof T,
+	ArrayKeys<T> | ObjectKeys<T>
+>;
 
 // https://stackoverflow.com/a/52490977
 type _TupleOf<T, N extends number, R extends unknown[]> = R['length'] extends N
@@ -74,4 +83,13 @@ export type GetPaths<T, FirstPass extends boolean = true> =
 
 export type EdenTreaty<
 	T extends Elysia<any, any, any, any, any, any, any, any>
-> = ReturnType<typeof treaty<T>>;
+> = ReturnType<typeof treaty<T & { derive: any }>>;
+
+export type IsMapped<T> = string extends keyof T ? true : false;
+
+export type ExtractArray<T> = T extends (infer U)[] ? T : never;
+export type ValueOrArray<T> = T | ValueOrArray<T>[];
+
+export type PartiallyPartial<T, K extends string> = Omit<T, K> &
+	//@ts-ignore
+	Partial<Pick<T, K>>;

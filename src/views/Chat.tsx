@@ -1,207 +1,434 @@
 import Html from '@kitajs/html';
-import { Actor, ChatMessage, Timestamp } from '../types/types';
-import { parseTimestamp, toPrettyDate } from '../utils';
-import { ActorLink, ActorPortrait } from './Actors';
+import {
+	Actor,
+	ActorGroup,
+	ChatMessage,
+	RoomSettings,
+	Safe,
+	Timestamp,
+	User,
+	UserChatMessage,
+} from '../types/types';
+import { byId, escape, parseTimestamp, toPrettyDate } from '../utils';
+import { ActorItem, Portrait } from './Actors';
 import { RoomController } from '../controller';
+import { AutoResizeInput } from '../components/AutoResizeInput';
+import { Select } from '../components/Select';
+import { redirect } from 'elysia';
+import { Placeholder } from '../components/Placeholder';
+import { URLs } from '..';
+import sanitize from 'sanitize-html';
 
-export function ChatActorItem({
+export function ChatItem({
 	room,
-	actor,
+	item,
 	selected,
 	side,
 	targetId,
+	plain,
+	noPortrait,
+	darkPortrait,
 	children,
 }: {
 	room: RoomController;
-	actor: Actor;
+	item: Actor | ActorGroup | User;
 	selected: boolean;
 	side: 'left' | 'right';
-	targetId: string;
-	children: JSX.Element;
+	targetId?: string;
+	plain?: true;
+	noPortrait?: true;
+	darkPortrait?: true;
+	children?: JSX.Element;
 }) {
+	const isUser = Object.hasOwn(item, 'active');
+
 	return (
 		<label
-			id={`chat-actor-${actor.id}`}
-			class='chat-actor-item row'
-			hx-trigger='click'
+			id={`chat-${isUser ? 'user' : 'actor'}-${item.id}`}
+			class={`chat-item row`}
+			data-plain={plain}
 			hx-swap='none'
 		>
-			{children}
-			{side === 'left' ? (
-				<ActorLink room={room} actor={actor} side={side} targetId={targetId} />
-			) : (
-				''
-			)}
-			<ActorPortrait room={room} actor={actor} />
-			{side === 'right' ? (
-				<ActorLink room={room} actor={actor} side={side} targetId={targetId} />
-			) : (
-				''
-			)}
+			{children as Safe}
+			<ActorItem
+				room={room}
+				actor={item}
+				side={side}
+				targetId={targetId}
+				link={!plain || undefined}
+				tooltip={!plain || undefined}
+				noPortrait={noPortrait}
+				darkPortrait={darkPortrait}
+			/>
 		</label>
 	);
 }
 
-export function FromActorsView({ room }: { room: RoomController }) {
-	const actors = room
-		.get('actors')
-		.filter((actor) => actor.reserved === room.uid);
-	const user = room.get('users').find((user) => user.id === room.uid)!;
+export function ActiveFromActorItem({
+	room,
+	plain,
+}: {
+	room: RoomController;
+	plain?: true;
+}) {
+	const fromId = room.user.sendingFrom;
 
-	const isSelected = (actor: Actor) => actor.id === user.sendingFrom;
+	if (!fromId) return '';
+
+	const activeFromActor = room.actors.find(byId(fromId))!;
 
 	return (
 		<>
-			{actors.map((actor) => (
-				<ChatActorItem
-					room={room}
-					actor={actor}
-					selected={isSelected(actor)}
-					targetId='from-actor-tooltip'
-					side='right'
+			<span
+				style={{
+					float: 'inline-start',
+					display: 'inline-flex',
+					width: 'min-content',
+					color: 'unset',
+				}}
+			>
+				<Portrait room={room} item={activeFromActor} dark />
+				<span
+					id='select-language'
+					class={'chat-message-actor-name'}
+					data-selected={activeFromActor.knownLanguages[0]}
 				>
-					<input
-						name='from'
-						type='radio'
-						value={actor.id}
-						checked={isSelected(actor)}
-						hx-trigger='click'
-						onclick='event.preventDefault()'
-						hx-patch={room.URL.user(`/sendingFrom/${actor.id}`)}
+					<Select
+						dropdownStyle={{
+							// marginBottom: '1rem',
+							backgroundColor: 'var(--clr-background)',
+							outlineColor: 'var(--clr-foreground)',
+						}}
+						id='select-language'
+						name='language'
+						options={activeFromActor.knownLanguages}
+						customSelected={{ datasetOnly: true }}
+						clientOnly
+						openUp
+						teleport
 					/>
-				</ChatActorItem>
+					<span>
+						[
+						<ActorItem
+							room={room}
+							actor={activeFromActor!}
+							targetId='chat-actor-tooltip'
+							side='left'
+							noPortrait
+						/>
+						]
+					</span>
+				</span>
+			</span>
+		</>
+	);
+}
+export function ActiveToActorItem({ room }: { room: RoomController }) {
+	const toIds = room.user.sendingTo;
+	if (toIds.length === 0) return '';
+	const activeToActors = toIds.map(
+		(actorId) =>
+			room.actors.find(byId(actorId)) ?? room.actorGroups.find(byId(actorId))!
+	);
+
+	const fromActorId = room.user.sendingFrom;
+	let values = activeToActors.map((actor) =>
+		actor.id === fromActorId ? 'themself' : actor.name
+	);
+	let value = values[0];
+
+	if (values.length > 1)
+		for (let i = 1; i < values.length; i++) {
+			if (i === values.length - 1) {
+				value += ` and ${values[i]}`;
+			} else {
+				if (i === 1) value += ',';
+				value += ` ${values[i]},`;
+			}
+		}
+
+	return (
+		<AutoResizeInput
+			id='message-to'
+			name='toActors'
+			placeholder={value}
+			value={value}
+		/>
+	);
+}
+
+export function _ChatActorsView({
+	room,
+	type,
+	items,
+}: {
+	room: RoomController;
+	type: 'to' | 'from' | 'users';
+	items: Actor[] | ActorGroup[] | User[];
+}) {
+	const isSelected = (item: Actor | ActorGroup | User) =>
+		type === 'users'
+			? (item as User).active
+			: 'from'
+			? item.id === room.user.sendingFrom
+			: room.user.sendingTo.includes(item.id);
+
+	return (
+		<>
+			{items.map((item) => (
+				<ChatItem
+					room={room}
+					item={item}
+					selected={isSelected(item)}
+					targetId={
+						type === 'users' ? 'users-tooltip' : `${type}-actor-tooltip`
+					}
+					side={type === 'to' ? 'right' : 'left'}
+				>
+					{type === 'users' ? (
+						''
+					) : (
+						<input
+							name={type}
+							type='checkbox'
+							value={item.id}
+							checked={isSelected(item)}
+							hx-patch={URLs.room(room.id).user(`/sending-${type}/${item.id}`)}
+							hx-trigger={
+								type === 'to' || !isSelected(item) ? 'click' : undefined
+							}
+							onclick='event.preventDefault()'
+							hx-on:htmx-config-request={
+								type === 'to'
+									? 'event.detail.parameters["usedCtrl"] = event.detail.triggeringEvent?.ctrlKey;'
+									: undefined
+							}
+						/>
+					)}
+				</ChatItem>
 			))}
-			<div id='from-actor-tooltip' class='actor-tooltip'></div>
+		</>
+	);
+}
+export function ChatFromActorsView({ room }: { room: RoomController }) {
+	const actors = room.actors.filter(
+		(actor: Actor) => actor.reserved === room.user.id
+	);
+
+	return (
+		<>
+			<_ChatActorsView room={room} type='from' items={actors} />
+			<div id='from-actor-tooltip' class='item-tooltip'></div>
+		</>
+	);
+}
+export function ChatToActorsView({ room }: { room: RoomController }) {
+	return (
+		<>
+			<div class='to-actors-list'>
+				<_ChatActorsView room={room} type='to' items={room.actors} />
+			</div>
+			<div class='to-actor-groups-list'>
+				<_ChatActorsView room={room} type='to' items={room.actorGroups} />
+			</div>
+			<div id='to-actor-tooltip' class='item-tooltip'></div>
 		</>
 	);
 }
 
-export function ToActorsView({ room }: { room: RoomController }) {
-	const actors = room
-		.get('actors')
-		.filter((actor) => actor.reserved !== room.uid);
-	const user = room.get('users').find((user) => user.id === room.uid)!;
+function determineMessageColor(
+	intro: string,
+	verbs: RoomSettings['verbs'],
+	allVerbs: string[][]
+) {
+	const tokens = intro.split(' ');
+	for (const verbage of allVerbs) {
+		const asPrefix = verbs[verbage[0]].asPrefix;
 
-	const isSelected = (actor: Actor) => user.sendingTo.includes(actor.id);
+		for (let token of tokens) {
+			token = escape(token);
 
-	return (
-		<>
-			{actors.map((actor) => (
-				<ChatActorItem
-					room={room}
-					actor={actor}
-					selected={isSelected(actor)}
-					targetId='to-actor-tooltip'
-					side='left'
-				>
-					<input
-						name='to'
-						type='checkbox'
-						value={actor.id}
-						checked={isSelected(actor)}
-						hx-patch={room.URL.user(`/sendingTo/${actor.id}`)}
-						hx-trigger='click'
-						onclick='event.preventDefault()'
-						hx-on:htmx-config-request='event.detail.parameters["usedCtrl"] = event.detail.triggeringEvent?.ctrlKey;'
-					/>
-				</ChatActorItem>
-			))}
-			<div id='to-actor-tooltip' class='actor-tooltip'></div>
-		</>
-	);
+			if (asPrefix && verbage.some((verb) => token.startsWith(verb)))
+				return `var(--clr-msg-type-prefixed-${verbage[0]})`;
+			if (verbage.some((verb) => verb === token))
+				return `var(--clr-msg-type-${verbage[0]})`;
+		}
+	}
+	return 'unset';
 }
 
-export function ChatItem({
+export function ChatMessageItem({
 	room,
 	chat,
 	timestamp,
 }: {
 	room: RoomController;
-	chat: ChatMessage;
+	chat: ChatMessage | UserChatMessage;
 	timestamp: Timestamp;
 }) {
-	const sender = room.get('users', chat.userId);
-	const speaker = room.get('actors', chat.actorId);
-	const user = room.get('users', room.uid);
-	const listener = room.get('actors', user.sendingFrom);
-
-	const listenerKnows = listener.languages.known.includes(chat.language);
-	const listenerIsFamiliar = listener.languages.familiar.includes(
-		chat.language
+	const sender = room.users.find(byId(chat.userId))!;
+	const speaker = room.actors.find(byId((chat as any).actorId ?? ''));
+	const listener = room.actors.find(byId(room.user.sendingFrom));
+	const listenerKnows = listener?.knownLanguages.includes(
+		(chat as any).language
+	);
+	const listenerIsFamiliar = listener?.familiarLanguages.includes(
+		(chat as any).language
 	);
 
+	const verbs = room.settings.verbs;
+	const allVerbs = Object.entries(verbs).map(([verb, props]) => [
+		verb,
+		...(props.aliases ?? []),
+	]);
+
 	return (
-		<span class='chat-message'>
-			<span style={{ float: 'inline-start', display: 'inline-flex' }}>
-				<ActorPortrait room={room} actor={speaker} />
+		<span
+			class='chat-message'
+			onclick={
+				speaker
+					? `reply('${URLs.room(room.id).user(`/sending-to/${speaker.id}`)}');`
+					: undefined
+			}
+		>
+			<span
+				style={{
+					float: 'inline-start',
+					display: 'inline-flex',
+					color: 'unset',
+				}}
+			>
+				<Portrait room={room} item={speaker ?? sender} />
 				<span
-					class={'chat-actor-name'}
-					data-language={
-						listenerKnows || listenerIsFamiliar ? chat.language : 'Unknown'
+					class={'chat-message-actor-name'}
+					data-selected={
+						speaker
+							? listenerKnows || listenerIsFamiliar
+								? (chat as ChatMessage).language
+								: 'Unknown'
+							: ''
+						//! MIGHT HAVE TO ESCAPE? AND IS IT SAFE???
 					}
 					data-date={timestamp.date}
 					data-time={timestamp.time}
 				>
-					<br />[
-					<ActorLink
-						room={room}
-						actor={speaker!}
-						targetId='chat-actor-tooltip'
-						side='right'
-					/>
-					]
+					<span>
+						[
+						<ActorItem
+							room={room}
+							actor={speaker ?? sender}
+							targetId={speaker ? 'chat-actor-tooltip' : 'users-tooltip'}
+							side='left'
+							link={!!speaker || undefined}
+							tooltip
+							noPortrait
+						/>
+						]
+					</span>
 				</span>
 			</span>
-			<br />
-			<span>
-				&nbsp;{chat.msgType.toLowerCase()}
-				s:&nbsp;
-			</span>
-			<span class={'chat-bubble'} style={{ fontSize: '0.85rem' }}>
-				{listenerKnows ? (
-					chat.message
-				) : listenerIsFamiliar ? (
-					<em>The words sound familiar but you can't quite understand it...</em>
+			<span
+				style={
+					speaker
+						? {
+								color: `${determineMessageColor(
+									(chat as ChatMessage).intro,
+									verbs,
+									allVerbs
+								)}`,
+						  }
+						: {}
+				}
+			>
+				<br />
+				{(chat as ChatMessage).intro ? (
+					<span class='chat-message-intro' safe>
+						&nbsp;{(chat as ChatMessage).intro}:&nbsp;
+					</span>
 				) : (
-					<em>
-						You have no idea what <strong>{speaker.name}</strong> just said...
-					</em>
+					':&nbsp;'
 				)}
+				<span
+					class='chat-message-bubble'
+					style={{
+						fontSize: '0.85rem',
+					}}
+				>
+					{listenerKnows || !speaker ? (
+						<span>
+							{
+								sanitize(chat.message, {
+									allowedTags: ['em', 'strong'],
+								}) as Safe
+							}
+						</span>
+					) : listenerIsFamiliar ? (
+						<em style={{ color: 'var(--clr-sys)' }}>
+							The words sound familiar but you can't quite understand it...
+						</em>
+					) : (
+						<em style={{ color: 'var(--clr-sys)' }}>
+							You have no idea what <strong safe>{speaker.name}</strong> just
+							said...
+						</em>
+					)}
+				</span>
 			</span>
-			<div class='chat-reply'></div>
-			<small class='chat-sender'>(From: {sender?.name})</small>
+			{speaker && (
+				<div
+					style={{
+						width: '100%',
+						whiteSpace: 'nowrap',
+						overflowY: 'hidden',
+					}}
+				>
+					<small class='chat-message-sender' safe>
+						(From: {sender.settings.displayName})
+					</small>
+				</div>
+			)}
 		</span>
 	);
 }
 
-export function ChatView({ room }: { room: RoomController }) {
+export function ChatView({
+	room,
+	messages,
+}: {
+	room: RoomController;
+	messages?: (ChatMessage | UserChatMessage)[];
+}) {
 	const _today = new Date();
 	const _yesterday = new Date(_today.getDate() - 1);
 	const today = _today.toLocaleDateString();
 	const yesterday = _yesterday.toLocaleDateString();
 
-	const messageGroups = room.get('messages').reduce((acc, curr, i) => {
+	const messageGroups = (messages ?? room.messages).reduce((acc, curr) => {
 		const timestamp = parseTimestamp(curr.timestamp, today, yesterday);
 
 		if (acc[acc.length - 1]?.[0]?.[1]?.date !== timestamp.date) acc.push([]);
 		(acc[acc.length - 1] ??= []).push([curr, timestamp]);
 
 		return acc;
-	}, [] as [ChatMessage, Timestamp][][]);
+	}, [] as [ChatMessage | UserChatMessage, Timestamp][][]);
 
 	return (
 		<>
-			{messageGroups.map((group) => (
-				<div class='col chat-group'>
-					<small class='chat-group-header'>
-						{toPrettyDate(group[0][1].group)}
-					</small>
-					{group.map(([chat, timestamp]) => (
-						<ChatItem room={room} chat={chat} timestamp={timestamp} />
-					))}
-				</div>
-			))}
-			<div id='chat-actor-tooltip' class='actor-tooltip'></div>
+			{messageGroups.length === 0 ? (
+				<Placeholder for='room' pKey='chat' args={[room]} />
+			) : (
+				messageGroups.map((group) => (
+					<div class='col chat-group'>
+						<small class='chat-group-header' safe>
+							{toPrettyDate(group[0][1].group)}
+						</small>
+						{group.map(([chat, timestamp]) => (
+							<ChatMessageItem room={room} chat={chat} timestamp={timestamp} />
+						))}
+					</div>
+				))
+			)}
+			<div id='chat-actor-tooltip' class='item-tooltip'></div>
 		</>
 	);
 }

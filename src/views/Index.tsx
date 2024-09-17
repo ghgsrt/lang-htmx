@@ -1,12 +1,14 @@
 import Html from '@kitajs/html';
 import { ValidatedInput } from '../components/Form';
 import { base } from '../controller';
+import { Safe } from '../types/types';
+import { BaseRoute, BaseValidatorRoute, URLs } from '..';
 
 export function Index(props: { children: JSX.Element }) {
 	return (
 		<>
 			{'<!DOCTYPE html>'}
-			<html lang='en'>
+			<html lang='en' onclick='focusMessage(event);'>
 				<head>
 					<meta charset='UTF-8' />
 					<link rel='icon' href='' />
@@ -15,21 +17,26 @@ export function Index(props: { children: JSX.Element }) {
 						content='width=device-width, initial-scale=1.0'
 					/>
 					<title>Lang</title>
-					<link href={base.URL('/styles.css')} rel='stylesheet' />
-					<link href={base.URL('/reset.css')} rel='stylesheet' />
+					<link href={'/styles.css' satisfies BaseRoute} rel='stylesheet' />
+					<link href={'/reset.css' satisfies BaseRoute} rel='stylesheet' />
 
-					<script src={base.URL('/resizeInput.js')}></script>
+					<script src={'/clientJS.js' satisfies BaseRoute}></script>
 
-					<script
+					{/* <script
 						src='https://unpkg.com/htmx.org@2.0.1'
 						integrity='sha384-QWGpdj554B4ETpJJC9z+ZHJcA/i59TyjxEPXiiUgN2WmTyV5OEZWCD6gQhgkdpB/'
 						crossorigin='anonymous'
-					></script>
+					></script> */}
+					<script src='/htmx.js'></script>
 					<script src='https://unpkg.com/htmx-ext-sse@2.2.1/sse.js'></script>
-					<script src='/idiomorph.min.js'></script>
+					<script src={'/idiomorph.min.js' satisfies BaseRoute}></script>
 				</head>
 				<body>
-					<div id='app'>{props.children}</div>
+					<div id='app'>{props.children as Safe}</div>
+					<div id='modal-container'>
+						<div id='modal'></div>
+					</div>
+					<div id='portal'></div>
 				</body>
 			</html>
 		</>
@@ -37,7 +44,7 @@ export function Index(props: { children: JSX.Element }) {
 }
 
 export function Header() {
-	return <div class='header'>v0.0.0</div>;
+	return <div class='header'>v1.0.0</div>;
 }
 
 export function Footer() {
@@ -45,8 +52,8 @@ export function Footer() {
 }
 
 export const JoinRoom = ValidatedInput({
-	action: base.URL('/join-room'),
-	validatorAction: base.URL.validate('/roomId'),
+	action: '/join-room' satisfies BaseRoute,
+	validatorAction: '/validate/roomId' satisfies BaseRoute,
 	target: '#app',
 	swap: 'innerHTML',
 	name: 'roomId',
@@ -59,10 +66,10 @@ export function HomeView() {
 		<Index>
 			<>
 				<Header />
-				<main>
+				<main class='home'>
 					<JoinRoom isValid={false} />
 					<form
-						hx-post={base.URL('/create-room')}
+						hx-post={'/create-room' satisfies BaseRoute}
 						hx-trigger='submit'
 						hx-target='#app'
 					>

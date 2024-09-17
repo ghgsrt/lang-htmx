@@ -1,158 +1,160 @@
 import Html from '@kitajs/html';
-import { TabGroup } from '../components/Containers';
-import { Editable } from '../components/Dynamics';
-import { RoomController, base } from '../controller';
-
-export const [Title, EditTitle] = Editable('title', (room) => (
-	<h2 sse-swap='update:title' hx-swap='innerHTML'>
-		{room.ssePartial('update:title')}
-	</h2>
-));
+import { Tab, TabGroup } from '../components/Containers';
+import { RoomController } from '../controller';
+import { SSEPartial } from './SSEPartial';
+import { AutoResizeInput } from '../components/AutoResizeInput';
+import { byId } from '../utils';
+import { BaseRoute, URLs } from '..';
 
 export function Languages({ room }: { room: RoomController }) {
 	return (
 		<>
-			{room
-				.get('actors', room.get('users', room.uid).sendingFrom)
-				.languages.known.map((language) => (
-					<option>{language}</option>
+			{room.actors
+				.find(byId(room.user.sendingFrom))
+				?.knownLanguages.map((language) => (
+					<option safe>{language}</option>
 				))}
 		</>
 	);
 }
 
 export function RoomView({ room }: { room: RoomController }) {
+	const SSE = SSEPartial(room);
+
+	const roomURL = URLs.room(room.id);
+
 	return (
 		<div
 			hx-ext='sse'
-			sse-connect={base.URL(`/listen/${room.rid}`)}
-			hx-post={room.URL('/init')}
-			hx-trigger='htmx:sseOpen'
+			sse-connect={`/listen/${room.id}` satisfies BaseRoute}
 			hx-swap='none'
 		>
+			<SSE event='update:roomSettings' hx-get={roomURL('/styles')} />
+			<SSE event='update:userSettings' hx-get={roomURL.user('/styles')} />
+
 			<div class='room' hx-swap='innerHTML'>
-				{/* <Title room={room} /> */}
 				<div class='row hidden'>
 					<div class='col'>
-						<h2 sse-swap='update:title' hx-target='this'>
-							{room.ssePartial('update:title')}
-						</h2>
-						<small sse-swap='update:id' hx-target='this'>
-							{room.ssePartial('update:id')}
-						</small>
+						<SSE event='update:title' tag='h2' />
+						<SSE event='update:id' tag='small' />
 					</div>
-					<div title='force refresh the room' hx-post={room.URL('/init')} hx-trigger='click' hx-swap='none'>
-						<div class='reload-room'></div>
+					<div
+						title='force refresh the room'
+						hx-get={roomURL('/init' as any)}
+						hx-trigger='click'
+						hx-swap='none'
+					>
+						<div class='reload'></div>
 					</div>
 				</div>
 				<br />
 				<div class='flex'>
-					<TabGroup
-						tabs={() => ({
-							chat: (
-								<section title='Chat'>
-									<form
-										class='chat-form'
-										hx-post={room.URL('/send')}
-										hx-trigger='submit'
-										hx-swap='none'
-										hx-on:htmx-after-swap="document.getElementById('chat-input').value = ''"
-									>
-										<div hx-swap='innerHTML'>
-											<div class='row flex'>
-												<div
-													class='active-actors'
-													sse-swap='update:fromActors'
-													hx-target='this'
-												>
-													{room.ssePartial('update:fromActors')}
-												</div>
-												<main
-													class='chat'
-													sse-swap='update:messages'
-													hx-target='this'
-													hx-swap='innerHTML scroll:bottom'
-												>
-													{room.ssePartial('update:messages')}
-												</main>
-												<div
-													class='active-actors'
-													sse-swap='update:toActors'
-													hx-target='this'
-												>
-													{room.ssePartial('update:toActors')}
-												</div>
+					<TabGroup id='0'>
+						<Tab title='chat'>
+							<section data-title='Chat'>
+								<form
+									class='chat-form'
+									hx-post={roomURL('/send')}
+									hx-trigger='submit'
+									hx-swap='none'
+									hx-on:htmx-after-request="if (event.detail.successful) document.getElementById('message-area').value = ''"
+								>
+									<div class='hidden'>
+										<div class='row flex'>
+											<SSE
+												event='update:chatFromActors'
+												class='active-actors'
+											/>
+											<SSE
+												event='update:chat'
+												scroll='bottom'
+												tag='main'
+												class='chat'
+											/>
+											<SSE event='update:chatToActors' class='active-actors' />
+										</div>
+										<div class='message-container'>
+											<div class='message-header'>
+												<SSE
+													event='update:chatFromActors'
+													id='selected-from-actor'
+													hx-get={roomURL('/sending-from-item')}
+												/>
+												<span style={{ display: 'flex' }}>
+													<AutoResizeInput
+														id='message-intro'
+														name='intro'
+														placeholder='intro'
+														colorByValue={false}
+														oninput={`setMessageColor(this)`}
+													/>
+												</span>
+												<SSE
+													event='update:chatToActors'
+													id='selected-to-actor'
+													hx-get={roomURL('/sending-to-item')}
+													tag='span'
+												/>
 											</div>
-											<div class='row'>
-												<select name='type'>
-													<option selected>say</option>
-													<option>yell</option>
-													<option>whisper</option>
-													<option>telepathy</option>
-												</select>
-												<select
-													hx-get={room.URL('/languages')}
-													hx-trigger='load, sse:update:fromActors'
-													hx-target='this'
-													style={{ width: '100%' }}
-													name='language'
-												>
-												</select>
-											</div>
-
-											<div class='row'>
-												<input
-													id='chat-input'
-													type='text'
+											<div class='message'>
+												<textarea
+													id='message-area'
 													name='message'
 													placeholder='message'
-													autocomplete='false'
+													// autocomplete="off"
+													hx-on:input='resizeTextArea(event)'
+													onkeydown='if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.target.nextSibling.click() }'
 												/>
-												<button type='submit'>send</button>
+												<button type='submit'></button>
+												<script>
+													{`resizeTextArea({ target: document.querySelector('textarea') });`}
+												</script>
 											</div>
 										</div>
-									</form>
-								</section>
-							),
-							actors: (
-								<section title='Actors' class='row'>
-									<div class='actors' sse-swap='update:actors' hx-target='this'>
-										{room.ssePartial('update:actors')}
 									</div>
-									<div id='actor-settings'>
-										{room.get('actors').length === 0 ? (
-											<div
-												id='actor-settings-placeholder'
-												class='placeholder'
-												hx-get={base.URL(
-													'/placeholder/actor-settings-placeholder/select an actor'
-												)}
-												hx-trigger='sse:update:actors'
-												hx-target='this'
-												hx-swap='outerHTML'
-											>
-												create an actor
-											</div>
-										) : (
-											<div id='actor-settings-placeholder' class='placeholder'>
-												select an actor
-											</div>
-										)}
-									</div>
-								</section>
-							),
-							users: (
-								<section title='Users' class='placeholder'>
-									TODO: users
-								</section>
-							),
-							settings: (
-								<section title='Settings' class='placeholder'>
-									TODO: settings
-								</section>
-							),
-						})}
-					/>
+								</form>
+							</section>
+						</Tab>
+						<Tab title='actors'>
+							<section data-title='Actors' class='row'>
+								<SSE event='update:actors' class='actors' />
+								<SSE
+									id='actor-settings'
+									event='update:actors'
+									hx-get={roomURL('/placeholder/actor-settings')}
+								/>
+							</section>
+						</Tab>
+						<Tab title='users'>
+							<section data-title='Chat'>
+								<SSE event='update:users' />
+							</section>
+						</Tab>
+						<Tab title='settings'>
+							<TabGroup id='1'>
+								<Tab title='user'>
+									<section data-title='User Settings'>
+										<SSE
+											id='user-settings'
+											event='update:userSettings'
+											class='settings'
+										/>
+									</section>
+								</Tab>
+								<Tab 
+									title={room.user.id === room.hostId ? 'host' : 'room'}
+								>
+									<section data-title='Room Settings'>
+										<SSE
+											id='room-settings'
+											event='update:roomSettings'
+											class='settings'
+										/>
+									</section>
+								</Tab>
+							</TabGroup>
+						</Tab>
+					</TabGroup>
 				</div>
 			</div>
 		</div>

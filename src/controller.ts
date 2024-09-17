@@ -1,325 +1,388 @@
 import { randomUUID } from 'crypto';
+import { SSEEvent, _broadcast, _sendTo, dataMap, storage } from '.';
 import {
-	BaseRoutes,
-	BaseValidatorRoutes,
-	RoomActorRoutes,
-	RoomRoutes,
-	RoomUserRoutes,
-	RoomValidatorRoutes,
-	SSEEventName,
-	_broadcast,
-	_sendTo,
-	dataMap,
-	storage,
-} from '.';
-import { Room, Actor, User, ChatMessage } from './types/types';
+	Room,
+	Actor,
+	User,
+	ChatMessage,
+	RoomSettings,
+	ActorGroup,
+	SyncMap,
+	sync,
+	UserSettings,
+	StripSync,
+	UserChatMessage,
+	SyncableArray,
+} from './types/types';
 import { ArrayKeys, TailParameters } from './types/utils';
+import {
+	byId,
+	byName,
+	byReserved,
+	deepClone,
+	replaceKeyOrdered,
+} from './utils';
+import { defaultUserStyles } from './views/Settings';
 
-//! similar dumbass deal as below
-//! let me use implicit return types ts for the love of God
-//! if explicit works with no other changes, then implicit should too 😠
-type Controller = {
-	URL: ReturnType<typeof _URLs.base>;
-	createRoom: (uid: string, rid?: string) => string;
-	roomController: (rid: string, uid: string) => RoomController;
-};
+export type ImmutableRoomProps = 'settings';
+export type MutableRoomProps = Exclude<ArrayKeys<Room>, ImmutableRoomProps>;
 
-//! fuck Typescript: circular dependency with URL (due to being used in room.derive [index.ts], putting it in the type for RoomRoutes, which is used in URL)
-//! explicit return type is the only fix (why does ts interpret it differently when the end result is literally fucking identical???)
-export type RoomController = {
-	rid: string;
-	uid: string;
-	URL: ReturnType<typeof _URLs.room>;
-	broadcast: TailParameters<typeof _broadcast>;
-	sendTo: TailParameters<typeof _sendTo>;
-	send: TailParameters<TailParameters<typeof _sendTo>>;
-	init: () => void;
-	get: <
-		P extends ID extends undefined
-			? keyof Room
-			: Exclude<ArrayKeys<Room>, 'availableLanguages'>,
-		ID extends string | undefined = undefined
-	>(
-		prop: P,
-		id?: ID
-	) => ID extends undefined ? Room[P] : Room[P][number];
-	set: <P extends Exclude<keyof Room, ArrayKeys<Room>>>(
-		prop: P,
-		value: Room[P]
-	) => void;
-	push: <P extends ArrayKeys<Room>>(prop: P, ...values: Room[P]) => void;
-	remove: <P extends ArrayKeys<Room>>(prop: P, value: Room[P][number]) => void;
-	update: <P extends Exclude<ArrayKeys<Room>, 'availableLanguages'>>(
-		prop: P,
-		id: string,
-		newValue:
-			| Partial<Room[P][number]>
-			| ((old: Room[P][number]) => Partial<Room[P][number]>)
-	) => void;
-	createUser: () => void;
-	createActor: () => Actor;
-	cloneActor: (actorId: string) => Actor;
-	recieveMessage: (message: ChatMessage) => void;
-	ssePartial: (
-		name: keyof typeof dataMap
-	) => ReturnType<(typeof dataMap)[keyof typeof dataMap]>;
-};
+const roomControllers: Record<string, ReturnType<typeof roomController>> = {};
 
-const _URLs = {
-	room: (rid: string) => {
-		const room = (path: RoomRoutes) => `/room/${rid}${path}`;
-		room.validate = (path: RoomValidatorRoutes) =>
-			`/room/${rid}/validate${path}`;
-		room.user = (path: RoomUserRoutes) => `/room/${rid}/user${path}`;
-		room.actor = (path: RoomActorRoutes) => `/room/${rid}/actor${path}`;
-
-		const generated = (path: `/${string}`) => `/room/${rid}${path}`;
-		generated.validate = (path: `/${string}`) => `/room/${rid}/validate${path}`;
-		generated.user = (path: `/${string}`) => `/room/${rid}/user${path}`;
-		generated.actor = (path: `/${string}`) => `/room/${rid}/actor${path}`;
-
-		room.generated = generated;
-
-		return room;
-	},
-	base: () => {
-		const base = (path: BaseRoutes) => `${path}`;
-		base.validate = (path: BaseValidatorRoutes) => `/validate${path}`;
-
-		const generated = (path: `/${string}`) => `${path}`;
-		generated.validate = (path: `/${string}`) => `/validate${path}`;
-		generated.tab = (groupId: string | number, tab?: string | number) =>
-			`/tab/${groupId}/${tab ?? ':tab'}`;
-
-		base.generated = generated;
-
-		return base;
-	},
-};
-
-const _controller = (): Controller => {
-	const roomController = (rid: string, uid: string): RoomController => {
-		const broadcast: TailParameters<typeof _broadcast> = (
-			eventName,
-			extraArgs
-		) => {
-			_broadcast(rid, eventName, extraArgs);
-		};
-		const sendTo: TailParameters<typeof _sendTo> = (
-			uid,
-			eventName,
-			extraArgs
-		) => {
-			_sendTo(rid, uid, eventName, extraArgs);
-		};
-		const send: TailParameters<TailParameters<typeof _sendTo>> = (
-			eventName,
-			extraArgs
-		) => {
-			_sendTo(rid, uid, eventName, extraArgs);
-		};
-
-		const init = () => {
-			for (const eventName in dataMap) {
-				broadcast(eventName as SSEEventName);
-			}
-		};
-
-		const get = <
-			P extends ID extends undefined
-				? keyof Room
-				: Exclude<ArrayKeys<Room>, 'availableLanguages'>,
-			ID extends string | undefined = undefined
-		>(
-			prop: P,
-			id?: ID
-		): ID extends undefined ? Room[P] : Room[P][number] => {
-			return id !== undefined
-				? storage[rid][
-						prop as Exclude<ArrayKeys<Room>, 'availableLanguages'>
-				  ].find((item) => item.id === id)!
-				: storage[rid][prop];
-		};
-		const set = <P extends Exclude<keyof Room, ArrayKeys<Room>>>(
-			prop: P,
-			value: Room[P]
-		) => {
-			storage[rid][prop] = value;
-			broadcast(`update:${prop}`);
-		};
-		const push = <P extends ArrayKeys<Room>>(prop: P, ...values: Room[P]) => {
-			storage[rid][prop].push(...(values as any));
-			console.log('Pushed', prop, values);
-			if (Object.hasOwn(dataMap, `update:${prop}`))
-				broadcast(`update:${prop}` as keyof typeof dataMap);
-		};
-		const remove = <P extends ArrayKeys<Room>>(
-			prop: P,
-			value: Room[P][number]
-		) => {
-			const idx = storage[rid][prop].findIndex((x) => x === value);
-			if (idx !== -1) storage[rid][prop].splice(idx, 1);
-			if (Object.hasOwn(dataMap, `update:${prop}`))
-				broadcast(`update:${prop}` as keyof typeof dataMap);
-		};
-		const update = <P extends Exclude<ArrayKeys<Room>, 'availableLanguages'>>(
-			prop: P,
-			id: string,
-			newValue:
-				| Partial<Room[P][number]>
-				| ((old: Room[P][number]) => Partial<Room[P][number]>)
-		) => {
-			const idx = storage[rid][prop].findIndex((x) => x.id === id);
-			if (idx === -1) return;
-
-			const _newValue =
-				typeof newValue === 'function'
-					? newValue(storage[rid][prop][idx])
-					: newValue;
-
-			if (storage[rid][prop][idx] === _newValue) return;
-
-			storage[rid][prop][idx] = { ...storage[rid][prop][idx], ..._newValue };
-			broadcast(`update:${prop}`);
-
-			if (prop === 'users') {
-				if ((_newValue as Partial<User>).sendingFrom) {
-					sendTo(id, 'update:fromActors');
-					sendTo(id, 'update:messages');
-				}
-				if ((_newValue as Partial<User>).sendingTo)
-					sendTo(id, 'update:toActors');
-			}
-
-			return storage[rid][prop][idx];
-		};
-
-		const createUser = () => {
-			push('users', {
-				id: uid,
-				name: 'Anonymous',
-				active: true,
-				sendingFrom: '',
-				sendingTo: [],
-			});
-		};
-
-		const createActor = () => {
-			const actor = {
-				id: randomUUID(),
-				name: 'Anonymous',
-				languages: { known: ['Common'], familiar: [] },
-				reserved: uid,
-				img: '',
-				color: '',
-			};
-			push('actors', actor);
-
-			update('users', uid, (old) => {
-				if (old.sendingFrom === '') return { sendingFrom: actor.id };
-				return old;
-			});
-
-			return actor;
-		};
-		const cloneActor = (actorId: string) => {
-			const actor = get('actors', actorId);
-
-			const clone = {
-				...actor,
-				userId: randomUUID(),
-				reserved: uid,
-			};
-			push('actors', clone);
-
-			update('users', uid, (old) => {
-				if (old.sendingFrom === '') return { sendingFrom: clone.id };
-				return old;
-			});
-
-			return clone;
-		};
-
-		const recieveMessage = (message: ChatMessage) => push('messages', message);
-
-		const ssePartial = (name: keyof typeof dataMap) =>
-			dataMap[name](base.roomController(rid, uid));
-
-		const URL = _URLs.room(rid);
-
-		return {
-			rid,
-			uid,
-			URL,
-			broadcast,
-			sendTo,
-			send,
-			init,
-			get,
-			set,
-			push,
-			remove,
-			update,
-			createUser,
-			createActor,
-			cloneActor,
-			recieveMessage,
-			ssePartial,
-		};
+const roomController = (rid: string) => {
+	//! if placed outside the function, ts thinks there's a circular dependency
+	//! despite only being used in this fucking file
+	//! Beyond comprehension
+	const defaultUserSettings: Partial<UserSettings> = {
+		styles: { ...defaultUserStyles },
 	};
 
-	const roomControllers: Record<string, Record<string, RoomController>> = {};
-	let lol: ReturnType<typeof _URLs.base> | undefined = undefined;
+	let serverUser: User;
 
-	return {
-		get URL() {
-			//! if you don't use the getter, then ts decides there's a circular dependency 🫵🏻👎🏻
-			if (!lol) lol = _URLs.base();
-			return lol;
+	const batched: {
+		broadcast: Set<SSEEvent>;
+		sendTo: Record<string, Set<SSEEvent>>;
+	} = {
+		broadcast: new Set(),
+		sendTo: {},
+	};
+	const batcher = {
+		broadcast: (event: SSEEvent) => batched.broadcast.add(event),
+		sendTo: (uid: string, event: SSEEvent) =>
+			(batched.sendTo[uid] ??= new Set()).add(event),
+		flush: () => {
+			for (const event of batched.broadcast) _broadcast(rid, event);
+			for (const uid in batched.sendTo) {
+				const events = batched.sendTo[uid].difference(batched.broadcast);
+				for (const event of events) _sendTo(rid, uid, event);
+			}
+
+			batched.broadcast = new Set();
+			batched.sendTo = {};
 		},
-		createRoom: (uid: string, rid?: string) => {
-			const _rid = rid || randomUUID();
+	};
+
+	const broadcast: TailParameters<typeof _broadcast> = (event) =>
+		batcher.broadcast(event);
+	const sendTo: TailParameters<typeof _sendTo> = (uid, event) => {
+		batcher.sendTo(uid, event);
+	};
+	const send: TailParameters<typeof sendTo> = (event) => {
+		batcher.sendTo(serverUser.id, event);
+	};
+
+	const ssePartial = (name: keyof typeof dataMap) => dataMap[name](controller);
+
+	const init = (event?: SSEEvent) => {
+		if (event) return ssePartial(event); //sendTo(serverUser.id, event);
+
+		for (const event in dataMap) sendTo(serverUser.id, event as SSEEvent);
+	};
+
+	const users = storage[rid].users;
+	const actors = storage[rid].actors;
+	const actorGroups = storage[rid].actorGroups;
+	const messages = storage[rid].messages;
+	const userMessages = storage[rid].userMessages;
+	const settings = storage[rid].settings;
+
+	const _onRemove = {
+		actors: (actor?: Actor) => {
+			if (!actor) return;
+
+			if (serverUser.id === settings.host) {
+				for (const user of users) {
+					if (user.sendingFrom === actor.id)
+						user.set('sendingFrom', actors.find(byReserved(user.id))?.id ?? '');
+
+					user.sendingTo.delete(actor.id);
+				}
+			} else {
+				if (serverUser.sendingFrom === actor.id)
+					serverUser.set(
+						'sendingFrom',
+						actors.find(byReserved(serverUser.id))?.id ?? ''
+					);
+
+				serverUser.sendingTo.delete(actor.id);
+			}
+		},
+		actorGroups: (group?: ActorGroup) => {
+			if (!group) return;
+
+			if (serverUser.id === settings.host) {
+				for (const user of users) user.sendingTo.delete(group.id);
+			} else serverUser.sendingTo.delete(group.id);
+		},
+	};
+	const _onPush = {
+		actors: (actor: Actor) => {
+			if (serverUser.sendingFrom === '')
+				serverUser.set('sendingFrom', actor.id);
+		},
+	};
+
+	const _sync: SyncMap<Room, MutableRoomProps> = {
+		users: {
+			__base: () => broadcast('update:users'),
+			__item: (user) => ({
+				sendingFrom: (value) => {
+					if (value === '')
+						user.sendingFrom = actors.find(byReserved(user.id))?.id ?? '';
+
+					sendTo(user.id, 'update:chatFromActors');
+					sendTo(user.id, 'update:chatToActors');
+					sendTo(user.id, 'update:chat');
+				},
+				sendingTo: { __base: () => sendTo(user.id, 'update:chatToActors') },
+			}),
+		},
+		actors: {
+			__base: () => {
+				broadcast('update:actors'); // refresh actor view
+				broadcast('update:chatFromActors'); // show new name or img
+				broadcast('update:chatToActors'); // show new name or img
+				broadcast('update:chat'); // show new name or color or img
+			},
+			__item: (actor) => ({
+				knownLanguages: {},
+				familiarLanguages: {},
+				reserved: (value) => {
+					if (value === '') serverUser.set('sendingFrom', '');
+					else if (serverUser.sendingFrom === '')
+						serverUser.set('sendingFrom', actor.id);
+				},
+				id: (value, prev) => {
+					for (const message of messages) {
+						if (message.actorId === prev) message.actorId = value;
+						const to = message.to.findIndex((to) => to === prev);
+						if (to !== -1) message.to[to] = value;
+					}
+				},
+			}),
+			splice: ([actor]) => _onRemove.actors(actor),
+			shift: _onRemove.actors,
+			pop: _onRemove.actors,
+			push: (len) => _onPush.actors(actors[len - 1]),
+			unshift: (len) => _onPush.actors(actors[len - 1]),
+		},
+		actorGroups: {
+			__base: () => {
+				broadcast('update:actors');
+				broadcast('update:chatToActors');
+				broadcast('update:chat');
+			},
+			__item: () => ({ actorIds: {} }),
+			splice: ([group]) => _onRemove.actorGroups(group),
+			shift: _onRemove.actorGroups,
+			pop: _onRemove.actorGroups,
+		},
+		messages: {
+			__base: () => broadcast('update:chat'),
+			__item: () => ({ to: {} }),
+		},
+		userMessages: {
+			__base: () => broadcast('update:usersChat'),
+		},
+	};
+	const _with = sync(storage[rid], _sync); //? for resyncing or whatever; e.g., actor.sync(_with.actors.item)
+
+	const createUser = (uid: string, displayName: string) => {
+		const user: StripSync<User> = {
+			id: uid,
+			active: true as boolean,
+			sendingFrom: '',
+			sendingTo: [] as any,
+			settings: {
+				...deepClone(defaultUserSettings),
+				userId: uid,
+				displayName: displayName,
+			},
+		};
+		users.push(user);
+
+		return user as unknown as User;
+	};
+
+	const createActor = () => {
+		const actor: StripSync<Actor> = {
+			id: randomUUID(),
+			name: 'Anonymous',
+			knownLanguages: [...settings.defaultLanguages] as any,
+			familiarLanguages: [] as any,
+			reserved: serverUser.id,
+			img: '',
+			color: '',
+		};
+		actors.push(actor);
+
+		return actor as unknown as Actor;
+	};
+	const cloneActor = (actorId: string) => {
+		const actor = actors.find(byId(actorId));
+		if (!actor) return;
+
+		const clone = {
+			...actor,
+			id: randomUUID(),
+			reserved: serverUser.id,
+		};
+		actors.push(clone);
+
+		return clone as unknown as Actor;
+	};
+
+	const createActorGroup = () => {
+		const group: StripSync<ActorGroup> = {
+			id: randomUUID(),
+			name: 'Anonymous Group',
+			actorIds: [] as any,
+			img: '',
+			color: '',
+		};
+		actorGroups.push(group);
+		actorGroups.fill;
+
+		return group as unknown as ActorGroup;
+	};
+	const cloneActorGroup = (groupId: string) => {
+		const group = actorGroups.find(byId(groupId));
+		if (!group) return;
+
+		const clone = { ...group, id: randomUUID() };
+		actorGroups.push(clone);
+
+		return clone as unknown as ActorGroup;
+	};
+
+	const recieveMessage = (message: ChatMessage) => messages.push(message);
+	const recieveUserMessage = (message: UserChatMessage) =>
+		userMessages.push(message);
+
+	const setId = (id: string) => {
+		if (serverUser.id !== storage[rid].hostId) return;
+		if (storage[id]) return;
+
+		replaceKeyOrdered(storage, rid, id); //! make sure this doesn't cause massive issues lmao
+		replaceKeyOrdered(roomControllers, rid, id); //! make sure this doesn't cause massive issues lmao
+
+		rid = id;
+
+		broadcast('update:id');
+	};
+
+	const _setHost = (newHost: User) => {
+		storage[rid].hostId = newHost.id;
+		settings.host = newHost.settings.displayName;
+	};
+
+	const setHost = (name: string) => {
+		if (serverUser.id !== storage[rid].hostId) return;
+
+		const newHost = users.find(byName(name));
+		if (!newHost) return;
+
+		_setHost(newHost);
+
+		sendTo(newHost.id, 'update:roomSettings');
+		sendTo(newHost.id, 'update:actors');
+		sendTo(newHost.id, 'update:chat');
+		send('update:roomSettings');
+		send('update:actors');
+		send('update:chat');
+	};
+
+	const controller = {
+		get id() {
+			return rid;
+		},
+		setId,
+		get user() {
+			return serverUser;
+		},
+		get hostId() {
+			return storage[rid].hostId;
+		},
+		setHost,
+		users,
+		actors,
+		actorGroups,
+		messages,
+		userMessages,
+		settings,
+		broadcast,
+		sendTo,
+		send,
+		flush: batcher.flush,
+		init,
+		ssePartial,
+		createUser,
+		createActor,
+		cloneActor,
+		createActorGroup,
+		cloneActorGroup,
+		recieveMessage,
+		recieveUserMessage,
+	};
+
+	return (uid: string) => {
+		const user = users.find(byId(uid));
+		if (user) {
+			serverUser = user;
+
+			if (!storage[rid].hostId) _setHost(serverUser);
+		} else serverUser = undefined as unknown as User; //? guards are in place to prevent server user from being undefined in 99% of places; don't want ?'s everywhere
+
+		return controller;
+	};
+};
+
+const _controller = () => {
+	const defaultRoomSettings: Partial<RoomSettings> = {
+		roomName: 'new room',
+		onlyHostMayDeleteActorGroups: false,
+		defaultLanguages: ['Common'],
+		languages: ['Common'],
+		defaultIntro: 'says',
+		verbs: {
+			yell: {
+				color: '#ff3f40',
+				asPrefix: true,
+				aliases: [],
+			},
+			whisper: {
+				color: '#ff7eff',
+				asPrefix: true,
+				aliases: [],
+			},
+		},
+	};
+	return {
+		createRoom: () => {
+			const _rid = randomUUID();
 			storage[_rid] = {
 				id: _rid,
-				title: 'new room',
-				host: uid,
 				users: [],
 				actors: [],
-				availableLanguages: [
-					'Common',
-					'Elvish',
-					'Dwarvish',
-					'Giant',
-					'Goblin',
-					'Orc',
-					'Abyssal',
-					'Celestial',
-					'Draconic',
-					'Deep Speech',
-					'Infernal',
-					'Primordial',
-					'Sylvan',
-					'Undercommon',
-					'Aquan',
-					'Auran',
-					'Ignan',
-					'Terran',
-					'Druidic',
-					"Thieves' Cant",
-					'Sign Language',
-					'THIS IS TO TEST TEXT OVERFLOW ZOOOOOOOOOOOOOWEEEEEEEEEEEEEEE',
-				],
+				actorGroups: [],
 				messages: [],
-			};
+				userMessages: [],
+				settings: {
+					...deepClone(defaultRoomSettings),
+					roomId: _rid,
+				},
+			} as any;
 
 			return _rid;
 		},
-		roomController: (rid: string, uid: string): RoomController => {
-			if (!roomControllers[rid])
-				(roomControllers[rid] ??= {})[uid] = roomController(rid, uid);
-			return roomControllers[rid][uid];
+		roomController: (rid: string, uid: string) => {
+			if (!roomControllers[rid]) roomControllers[rid] = roomController(rid);
+
+			return roomControllers[rid](uid);
 		},
 	};
 };
 
 export const base = _controller();
+
+export type RoomController = ReturnType<ReturnType<typeof roomController>>;

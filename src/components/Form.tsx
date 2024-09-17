@@ -1,7 +1,12 @@
 import Html from '@kitajs/html';
+import { Safe } from '../types/types';
 
 export function FormError({ message }: { message: string }) {
-	return <div class='form-control-message error'>{message}</div>;
+	return (
+		<div class='form-control-message error' safe>
+			{message}
+		</div>
+	);
 }
 
 export function ValidatedInput({
@@ -45,11 +50,11 @@ export function ValidatedInput({
 					aria-invalid={!isValid}
 					hx-post={validatorAction}
 				/>
-				<button type='submit' disabled={!isValid}>
+				<button type='submit' disabled={!isValid} safe>
 					{buttonText}
 				</button>
 			</div>
-			{children}
+			{children as Safe}
 		</form>
 	);
 }

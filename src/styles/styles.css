@@ -1,13 +1,25 @@
 :root {
 	--clr-accent: #e78a4e;
 	--clr-sys: #d8a654;
-	--clr-error: #c34141;
+	--clr-error: #e72b2b;
+	--clr-error-bg: #e72b2b22;
 	--clr-background: #181818;
 	--clr-foreground: #282828;
 	--clr-text: #e6cda3;
 	--clr-text-disabled: #e6cda355;
-	--clr-text-select: inherit;
-	--clr-bg-select: #606060;
+	--clr-text-select: #606060;
+
+	--clr-settings-declaration: var(--clr-accent);
+	--clr-settings-bracket: #a9b665;
+	--clr-settings-property: var(--clr-text);
+	--clr-settings-quote: var(--clr-sys);
+	--clr-settings-text: var(--clr-sys);
+	--clr-settings-variable: var(--clr-text);
+	--clr-settings-special: #e6cda399;
+	--clr-settings-number: #d3869b;
+	--clr-settings-boolean: #d3869b;
+
+	/* --clr-msg-to-send: var(--clr-text); */
 
 	--fs-small: 0.65rem;
 
@@ -16,41 +28,31 @@
 	font-family: consolas, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 	font-weight: 400;
 
-	--width: min(100vw, (calc(100dvh * 2 / 3)));
-	font-size: calc(var(--width) / 35);
+	--max-width: calc(100dvh * 4 / 3);
+	--min-width: min(100vw, (calc(100dvh * 2 / 3)));
+	font-size: calc(var(--min-width) / 35);
 
 	background: var(--clr-background);
 	color: var(--clr-text);
 }
 
 ::selection {
-	background: var(--clr-bg-select);
-	color: var(--clr-text-select);
+	background: var(--clr-text-select);
+	color: inherit;
 }
 
 ::-webkit-scrollbar {
 	width: 0.0625rem;
-	height: 4px;
-	margin-left: 4px;
-}
-::-webkit-scrollbar-track:has(::-webkit-scrollbar-thumb:hover) {
-	width: 5px;
-}
-::-webkit-scrollbar-track {
-	/* padding: 0 20px; */
-	margin-left: 0.25rem;
-	background: var(--clr-background);
+	height: 0.0625rem;
 }
 ::-webkit-scrollbar-thumb {
-	/* margin: 0 20px; */
 	background: var(--clr-accent);
 }
-
-*:not(:hover) {
+html:not(.is-mobile) *:not(:hover) {
 	-ms-overflow-style: -ms-autohiding-scrollbar;
 	scrollbar-width: none;
 }
-*:not(:hover)::-webkit-scrollbar {
+html:not(.is-mobile) *:not(:hover)::-webkit-scrollbar {
 	display: none;
 }
 
@@ -66,8 +68,10 @@ html {
 }
 
 body {
-	min-width: var(--width);
+	max-width: var(--max-width);
+	min-width: var(--min-width);
 	overflow: hidden;
+	margin: 0 auto;
 }
 
 div {
@@ -84,7 +88,7 @@ small,
 }
 
 em {
-	color: var(--clr-sys);
+	/* color: var(--clr-sys); */
 }
 
 #app {
@@ -122,7 +126,14 @@ button {
 button:hover {
 	/* background: var(--clr-accent); */
 	/* color: var(--clr-foreground); */
-	color: var(--clr-accent) !important;
+	color: var(--clr-accent);
+}
+
+button.delete {
+	color: var(--clr-error) !important;
+}
+button.delete:hover {
+	border-color: var(--clr-error);
 }
 
 button:disabled {
@@ -178,6 +189,86 @@ input:has(+ button) {
 }
 input + button {
 	flex: 1;
+}
+
+input[type='checkbox'] {
+	appearance: none;
+	position: relative;
+	cursor: pointer;
+	z-index: 0;
+	width: 0.8rem !important;
+	height: 0.8rem !important;
+	margin-left: 1ch;
+}
+
+input[type='checkbox']::before {
+	content: '';
+	position: absolute;
+	top: -21%;
+	left: -40%;
+	height: 150%;
+	width: 150%;
+	border: 0.0625rem solid var(--clr-settings-boolean);
+	background-color: var(--clr-foreground) !important;
+	z-index: 1;
+}
+input[type='checkbox']:checked::after {
+	content: '';
+	position: absolute;
+	top: 5%;
+	left: 15%;
+	height: 80%;
+	width: 40%;
+	background-color: transparent !important;
+	z-index: 2;
+	border: solid var(--clr-settings-boolean);
+	-webkit-transform: rotate(45deg);
+	-ms-transform: rotate(45deg);
+	transform: rotate(45deg);
+	border-width: 0 0.125rem 0.125rem 0;
+}
+input[type='checkbox']:focus::before,
+input[type='checkbox']:focus::after {
+	border-color: var(--clr-accent) !important;
+}
+input[type='checkbox']:focus::before {
+	border-width: 0.125rem;
+}
+
+label:has(input):has(.select, .multiselect),
+label:has(
+		.select,
+		.multiselect,
+		+ :is(input, .select, .multiselect),
+		+ * + .select,
+		+ * + .multiselect
+	) {
+	cursor: pointer !important;
+
+	& * {
+		cursor: pointer !important;
+	}
+}
+input[readonly],
+label:has(input[readonly]):not(:has(.select, .multiselect):not(.readonly)),
+label:has(
+		.select.readonly,
+		.multiselect.readonly,
+		+ :is(input[readonly], .select.readonly, .multiselect.readonly),
+		+ * + .select.readonly,
+		+ * + .multiselect.readonly
+	) {
+	cursor: default !important;
+	pointer-events: none;
+
+	& * {
+		cursor: default !important;
+		pointer-events: none !important;
+	}
+	& + input[readonly] {
+		cursor: default !important;
+		pointer-events: none !important;
+	}
 }
 
 [class='placeholder'] {
@@ -277,7 +368,15 @@ input + button {
 	overflow: hidden;
 }
 
-#actor-settings label {
+.home {
+	font-size: 1.25rem;
+}
+
+#portal {
+	z-index: 10000;
+}
+
+#actor-settings > label {
 	margin-bottom: 0.33rem;
 }
 
@@ -288,11 +387,91 @@ input + button {
 	left: -100%;
 }
 
+input.inline {
+	outline: none !important;
+	border: none !important;
+	padding: 0;
+	color: inherit;
+	width: min-content;
+}
+
+#modal-container {
+	display: flex;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 1000000;
+	pointer-events: painted;
+}
+#modal {
+	margin: auto;
+	width: max-content;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	background-color: var(--clr-background);
+	border: 0.125rem solid var(--clr-accent);
+	font-size: 1.5rem;
+	max-width: 80%;
+}
+#modal form {
+	margin-top: 1.4rem;
+}
+#modal h2 {
+	text-align: center;
+}
+#modal small {
+	font-size: 0.85rem;
+}
+#modal:is(.alert, .modal-error) small {
+	color: var(--clr-error) !important;
+}
+#modal .messages {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+#modal .messages :first-child {	
+	margin-bottom: 0.5rem;
+}
+#modal .buttons {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 1.5rem;
+}
+#modal .buttons button {
+	/* width: 48%; */
+	background-color: var(--clr-background);
+	border: 0.125rem solid var(--clr-foreground);
+}
+#modal .buttons button:first-child {
+	margin-right: 1rem;
+}
+#modal .buttons button:hover {
+	color: var(--clr-accent);
+}
+#modal:is(.warning, .alert) button[type='submit']:hover {
+	color: var(--clr-error);
+	border-color: var(--clr-error);
+}
+#modal-container:has(#modal:empty) {
+	display: none;
+}
+
+*:has(> .select) {
+	width: fit-content;
+}
+.select,
 .multiselect {
 	position: relative;
 	width: 100%;
 	height: min-content;
-	min-height: 1rem;
+	/* min-height: 1rem; */
 	display: flex;
 	background-color: var(--clr-foreground) !important;
 	/* border: 0.125rem solid var(--clr-foreground); */
@@ -300,12 +479,20 @@ input + button {
 	padding-left: 0.25rem;
 	border-radius: 10px;
 }
-.multiselect:not(:has(input:focus)) .multiselect-dropdown:not(:hover) {
-	visibility: hidden;
+.multiselect {
+	border: 0.0625rem solid transparent;
 }
-/* .multiselect:has(:focus, .multiselect-dropdown:has(:focus, *:focus, * *:focus)) .multiselect-dropdown {
-	visibility: visible;
-} */
+.select {
+	width: min-content;
+	padding: 0;
+	align-items: flex-end;
+}
+
+:is(.select, .multiselect).readonly {
+	cursor: default;
+	pointer-events: none;
+}
+
 .multiselect-input {
 	width: calc(100%);
 	height: calc(100%);
@@ -328,7 +515,12 @@ input + button {
 	margin-top: 0;
 }
 .multiselect:has(:focus) {
-	outline: 0.0625rem solid var(--clr-accent);
+	border-color: var(--clr-accent) !important;
+}
+.select-selected {
+	width: min-content;
+	white-space: nowrap;
+	text-overflow: ellipse;
 }
 .multiselect-selected {
 	display: flex;
@@ -377,14 +569,17 @@ input + button {
 }
 .multiselect-selected button:hover {
 	opacity: 1;
+	color: var(--clr-error);
 }
+.select-dropdown,
 .multiselect-dropdown {
 	display: flex;
 	flex-direction: column;
 	position: absolute;
 	top: calc(100% + 0.25rem);
 	left: 0;
-	right: 0;
+	/* right: 0; */
+	width: 100%;
 	height: min-content;
 	max-height: 10rem;
 	overflow-y: auto;
@@ -396,11 +591,31 @@ input + button {
 	z-index: 100000;
 	user-select: none;
 }
-.multiselect-dropdown:empty {
-	visibility: hidden;
+:is(.select-dropdown, .multiselect-dropdown):empty {
+	display: none !important;
+}
+.multiselect:not(:has(input:focus)) .multiselect-dropdown:not(:hover) {
+	display: none;
+}
+:is(.select-dropdown, .multiselect-dropdown).up {
+	top: unset;
+	bottom: calc(100% + 0.25rem);
+}
+.select-dropdown {
+	width: fit-content;
+	max-width: 20rem;
 }
 
+.hide {
+	display: none;
+}
+:is(.select-dropdown, .multiselect-dropdown):empty {
+	display: none;
+}
+
+.select-option,
 .multiselect-option {
+	/* display: inline-table; or not?? weird height issues without this lmao */
 	overflow: hidden;
 	padding: 0.25rem 0;
 	min-height: 1.5rem;
@@ -414,9 +629,13 @@ input + button {
 	cursor: pointer;
 	opacity: 0.75;
 }
-.multiselect-option:hover {
+
+:is(.select-option, .multiselect-option):hover {
 	opacity: 1;
 	background-color: #303030 !important;
+}
+:is(.select, .multiselect) label {
+	margin: 0;
 }
 
 .dropdown {
@@ -450,6 +669,10 @@ input + button {
 	display: flex;
 	flex-direction: row;
 }
+.tab-group > div[id$='content-wrapper'] {
+	width: 100%;
+	height: 100%;
+}
 
 .tab {
 	flex: 1;
@@ -475,6 +698,7 @@ input + button {
 }
 
 .tab-content {
+	display: none;
 	flex: 1;
 	height: 0px;
 	overflow-y: auto;
@@ -485,12 +709,15 @@ input + button {
 	border-bottom-right-radius: 10px;
 	z-index: 101;
 }
+.tab-content.selected {
+	display: block;
+}
 
 div:has(> .room) {
 	height: 100%;
 }
 
-input:-internal-autofill-selected {
+:is(input, textarea):-internal-autofill-selected {
 	background-color: var(--clr-foreground) !important;
 }
 
@@ -502,7 +729,7 @@ input:-internal-autofill-selected {
 	overflow: hidden;
 }
 
-.reload-room {
+.reload {
 	background-image: url('/icons/reload');
 	background-size: cover;
 
@@ -510,17 +737,22 @@ input:-internal-autofill-selected {
 	transform: translateY(-100px);
 	background-color: transparent !important;
 }
-div:has(> .reload-room) {
+div:has(> .reload) {
 	align-self: flex-end;
 	margin-right: 0.5rem;
 	cursor: pointer;
 }
-div:has(> .reload-room),
-.reload-room {
+div:has(> .reload),
+.reload {
 	width: 1.5rem;
 	height: 1.5rem;
 }
-div:has(> .reload-room):hover > .reload-room {
+div:has(> .reload.small),
+.reload.small {
+	width: 1rem;
+	height: 1rem;
+}
+div:has(> .reload):hover > .reload {
 	filter: drop-shadow(0px 100px 0 #323232);
 }
 
@@ -533,14 +765,14 @@ div:has(> .reload-room):hover > .reload-room {
 	padding: 0;
 }
 
-section[title='Chat'] {
+section[data-title='Chat'] {
 	display: flex;
 	flex-direction: column;
 	/* flex: 1 1; */
 	height: 100%;
 	overflow: hidden;
 }
-section[title='Chat'] > :first-child {
+section[data-title='Chat'] > :first-child {
 	flex: 1;
 	height: 0px;
 	overflow: hidden;
@@ -551,40 +783,58 @@ section[title='Chat'] > :first-child {
 	width: min-content;
 	max-width: 10rem;
 	overflow: hidden;
+	padding-bottom: 0.5rem;
 }
 
-.active-actors label {
+:is(.active-actors, #selected-from-actor, #selected-to-actor) label {
 	overflow: hidden;
 	width: 100%;
 	min-height: 2rem; /* uhhhhhhhhhhhhhhh */
 	padding: 0 0.5rem;
 }
+.active-actors:nth-of-type(2) label {
+	display: flex;
+	justify-content: flex-end;
+}
 
-.active-actors:nth-of-type(2) {
+:is(.active-actors, #selected-from-actor, #selected-to-actor):nth-of-type(2) {
 	direction: rtl;
 }
-.active-actors:nth-of-type(2) > * {
+:is(.active-actors, #selected-from-actor, #selected-to-actor):nth-of-type(2)
+	> * {
 	direction: ltr;
 }
-.active-actors:nth-of-type(1) .actor-portrait {
+
+:is(.active-actors:hover:nth-of-type(1), .select, .multiselect)
+	.actor-portrait {
 	margin-right: 0.5rem;
 	/* border-right: 0.0625rem solid var(--clr-foreground); */
 }
-.active-actors:nth-of-type(2) .actor-portrait {
+:is(.active-actors:hover:nth-of-type(2), #selected-to-actor) .actor-portrait {
 	margin-left: 0.5rem;
 	/* border-left: 0.0625rem solid var(--clr-foreground); */
 }
-.active-actors .actor-link {
-	flex: 1;
+:is(.active-actors, #selected-from-actor, #selected-to-actor) .item-link {
+	/* flex: 1; */
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	overflow: hidden;
+	padding: 0.25rem 0;
+}
+#selected-from-actor,
+#selected-to-actor {
+	width: min-content;
+}
+:is(#selected-from-actor, #selected-to-actor) > label {
+	margin: 0;
+	padding: 0;
+}
+:is(#selected-from-actor, #selected-to-actor) .item-link {
+	width: min-content;
 }
 
 .chat {
 	flex: 1;
-	padding-left: 0.25rem;
-	padding-right: 0.25rem;
 	padding-top: 0.5rem;
 }
 
@@ -602,26 +852,26 @@ section[title='Chat'] > :first-child {
 	margin-top: auto;
 }
 
-.actor-link {
+.item-link {
 	width: fit-content;
 	cursor: default;
 }
-.actor-link:hover {
+.item-link.decorate:hover {
 	text-decoration: underline;
 }
 
-.active-actors .actor-link {
+.active-actors .item-link {
 	display: none;
 }
-.active-actors:hover .actor-link {
+.active-actors:hover .item-link {
 	display: block;
 }
 
-.chat-actor-item:has(input[name='from']) .actor-link {
+.chat-item:has(input) .item-link {
 	cursor: pointer;
 }
 
-.actor-tooltip {
+.item-tooltip {
 	display: none;
 	width: fit-content;
 	position: absolute;
@@ -632,33 +882,69 @@ section[title='Chat'] > :first-child {
 	z-index: 100000;
 }
 
-:is(.active-actors, .chat):has(.actor-tooltip:hover) .actor-tooltip {
+:is(.active-actors, .chat):has(.item-tooltip:hover) .item-tooltip {
 	display: block !important;
 }
 
-section[title='Actors'] {
+section[data-title='Actors'] {
 	overflow-y: hidden;
 	height: 100%;
 }
 
-section[title='Actors'] > div {
+section[data-title='Actors'] > div {
 	padding: 0.25rem;
 }
 
 .actors {
 	height: 100%;
-	overflow-y: auto;
+	overflow: hidden;
 }
 
-.actors-view {
+.actors-view-container {
 	display: flex;
-	flex-flow: row wrap;
-	justify-content: center;
+	flex-direction: column;
+	height: 100%;
+}
+.actors-view-buttons {
+	display: flex;
+}
+@media (max-width: 675px) {
+	.actors-view-buttons {
+		flex-direction: column;
+	}
+}
+.actors-view {
+	height: 100%;
+	display: grid;
+	grid-template-rows: minmax(auto, min-content) 0.0625rem minmax(
+			auto,
+			min-content
+		);
+
+	overflow: hidden;
+}
+.actors-view > hr {
+	background-color: var(--clr-foreground) !important;
+	height: 0.125rem;
+	width: 100%;
+}
+:is(.actors-view-actors, .actors-view-actor-groups) {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	grid-gap: 0.25rem;
 	width: 100%;
 	overflow-x: hidden;
+	overflow-y: auto;
+	flex: 1;
+	min-height: 0;
 }
-.actors-view > * {
-	float: left;
+.actors-view-actors {
+	margin-top: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+.actors-view-actor-groups {
+	margin-top: 0.5rem;
+	padding-bottom: 0.5rem;
 }
 
 .actor-view {
@@ -676,21 +962,27 @@ section[title='Actors'] > div {
 	margin-right: 0.5rem;
 }
 
-.actor-item,
-.chat-actor-item {
-	display: flex;
-	align-items: center;
-	margin-top: 0.5rem;
-}
-
 .actor-item {
-	width: min-content;
-	max-width: 33%;
-	/* margin: 0.5rem 0.25rem; */
+	/* width: calc(33% - 0.5rem); */
+	height: min-content;
+	/* max-width: 33%; */
+	padding: 0.25rem;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	overflow: hidden;
 	cursor: pointer;
+	border: 0.0625rem solid transparent;
+}
+.actor-item,
+.chat-item {
+	display: flex;
+	align-items: center;
+}
+.chat-item {
+	margin-top: 0.5rem;
+}
+.actor-item.viewing-settings {
+	border-color: var(--clr-accent);
 }
 .actor-item * {
 	max-width: 100%;
@@ -698,12 +990,15 @@ section[title='Actors'] > div {
 	text-overflow: ellipsis;
 	overflow: hidden;
 }
+.actor-item > *:not(:last-child) {
+	margin-bottom: 0.125rem;
+}
 .actor-item small {
 	white-space: nowrap;
 	max-width: 80%;
 }
 
-:is(.actor-item, .chat-actor-item) input {
+:is(.actor-item, .chat-item) input {
 	/* display: none; */
 	visibility: hidden;
 	position: absolute;
@@ -717,35 +1012,36 @@ section[title='Actors'] > div {
 	min-height: 2rem;
 	max-height: 2rem;
 	border-radius: 50%;
-	background-color: var(--clr-foreground) !important;
+	/* background-color: var(--clr-foreground) !important; */
 }
-:is(.actor-item, .chat-actor-item):has(> input) .actor-portrait {
+
+:is(.actor-item, .chat-item):has(> input) .actor-portrait {
 	cursor: pointer;
 }
 
-:is(.actor-item, .chat-actor-item):has(> input:checked) .actor-portrait {
+:is(.actor-item, .chat-item):has(> input:checked) .actor-portrait {
 	border: 0.125rem solid var(--clr-accent);
 }
 
 .chat-message {
 	padding: 0.25rem;
-	/* padding-bottom: 0;
-	margin-top: 0.25rem; */
+}
+article:not([data-title='users']) .chat-message {
+	cursor: pointer;
 }
 
-.chat-message :is(.chat-timestamp, .chat-sender) {
+.chat-message :is(.chat-timestamp, .chat-message-sender) {
 	visibility: hidden;
 }
-.chat-message:hover :is(.chat-timestamp, .chat-sender) {
+.chat-message:hover :is(.chat-timestamp, .chat-message-sender) {
 	visibility: visible;
 }
 
-:is(.actor-item, .chat-actor-item) {
+:is(.actor-item, .chat-item:not([data-plain])) {
 	opacity: 0.8;
 }
 
-:is(.actor-item, .chat-actor-item):hover {
-	/* background-color: var(--clr-foreground) !important; */
+:is(.actor-item, .chat-item:not([data-plain])):hover {
 	opacity: 1;
 }
 .chat-message:hover {
@@ -763,6 +1059,9 @@ section[title='Actors'] > div {
 	padding-top: 0.5rem;
 	margin-top: 0.5rem;
 }
+.chat-group:nth-last-child(2) {
+	padding-bottom: 0.5rem;
+}
 
 .chat-group-header {
 	position: absolute;
@@ -772,37 +1071,379 @@ section[title='Actors'] > div {
 	padding: 0 0.25rem;
 }
 
-.chat-actor-name {
+.chat-message-actor-name {
 	position: relative;
 	margin-left: 0.5rem;
+	padding-top: 1rem;
 	overflow: visible;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	cursor: pointer;
 }
-.chat-actor-name::after {
-	content: attr(data-language);
+.chat-message-actor-name::before {
+	content: attr(data-selected);
 	position: absolute;
 	width: fit-content;
-	left: 0;
-	top: 0.4em;
+	left: 0.1rem;
+	top: 0;
 	font-size: var(--fs-small);
 	color: var(--clr-sys);
 	line-height: 1.2;
 	overflow-wrap: unset;
 	white-space: nowrap;
 }
-.chat-message:hover .chat-actor-name::after {
-	content: attr(data-language) ' | ' attr(data-date) ' ' attr(data-time);
+.chat-message-actor-name[data-selected='']::before {
+	content: attr(data-date) ' ' attr(data-time);
+}
+.chat-message:hover .chat-message-actor-name:not([data-selected=''])::before {
+	content: attr(data-selected) ' | ' attr(data-date) ' ' attr(data-time);
 }
 
-.chat-bubble {
+.chat-message-intro {
+	line-height: calc(var(--line-height) + 0.25rem);
+}
+
+.chat-message-bubble {
 	overflow-wrap: anywhere;
 	flex: 1;
 	background-color: transparent !important;
 }
 
-.chat-reply {
+.chat-message-reply {
 	width: min-content;
+}
+
+#preposition-1,
+#preposition-2,
+.message-container :is(textarea, input) {
+	color: var(--clr-msg-to-send);
+}
+
+textarea {
+	cursor: text;
+}
+
+#selected-from-actor {
+	margin-bottom: 0.25rem;
+}
+#selected-from-actor:not(:empty) {
+	margin-right: 0.25rem;
+}
+
+#message-intro {
+	margin-right: 1ch;
+}
+
+#message-intro,
+#selected-to-actor,
+#selected-to-actor > label {
+	height: min-content;
+	min-height: unset;
+	margin-bottom: 0.11rem;
+	align-self: end;
 }
 
 select[name='language'] {
 	flex: 1;
+}
+
+.message-container {
+	display: flex;
+	flex-direction: column;
+	background-color: var(--clr-foreground) !important;
+	padding: 0.5rem;
+	overflow: hidden;
+}
+
+.message-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	width: 100%;
+	margin-bottom: 0.5rem;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+#message-type {
+	display: flex;
+	align-items: flex-end;
+}
+
+.message {
+	display: flex;
+	flex-direction: row;
+}
+
+.message > textarea {
+	min-height: 1rem;
+	/* height: 1.5rem; */
+	max-height: 45vh;
+	flex: 1;
+	resize: none;
+	outline: none;
+	border: none;
+	overflow-y: hidden;
+	margin-top: 0.25rem;
+}
+/*
+	for some reason shows scroll bar on load without doing this even though
+	clearing the text should literally produce an identical state to onload
+	with the overflow set to auto 🤷🏻‍♂️
+*/
+.message > textarea[style*='height']:not([style*='height: 0px']) {
+	overflow-y: auto;
+}
+
+.message > button[type='submit'] {
+	width: min-content;
+}
+
+section[data-title='settings'] {
+	width: 100%;
+	height: 100%;
+}
+section[data-title$=' Settings'] {
+	display: inline-table; /* NECESSARY TO ENSURE THE WIDTH GROWS WHEN THE SECTION OVERFLOWS */
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+}
+
+.settings {
+	min-width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	z-index: 0;
+}
+.settings,
+.settings * {
+	background-color: transparent !important;
+	z-index: 2;
+	white-space: nowrap;
+}
+.settings-object {
+	min-width: 100%;
+}
+.settings *:not(label, label *) {
+	cursor: default;
+}
+
+.settings :is(.add, .remove) {
+	padding: 0 0.5ch;
+	display: none;
+	color: var(--clr-text);
+}
+.settings .remove:hover {
+	color: var(--clr-error) !important;
+}
+.settings .remove {
+	position: absolute;
+	z-index: 10;
+	margin-top: 0.2rem;
+	left: -1.3ch;
+}
+.settings .remove.inline {
+	position: relative;
+	left: 0;
+	padding: 0 0.35ch;
+	margin: 0 !important;
+}
+.settings:has(.variable-item > .settings-bracket:hover) .add,
+.add:hover {
+	color: var(--clr-settings-bracket) !important;
+}
+
+.settings .settings-to-default {
+	background-image: url('/icons/reload');
+	background-size: contain;
+	height: 0.75rem;
+	width: 0.75rem;
+	padding: 0.125rem;
+	position: absolute !important;
+	display: none;
+	left: -2.75ch;
+	top: 0.4ch;
+	background-color: transparent;
+	filter: invert(50%) sepia(50%) hue-rotate(0deg) saturate(3);
+	cursor: pointer;
+}
+
+.settings
+	:is(
+		.variable-property:not(:has(.variable-property:hover)):hover > .remove,
+		.variable-item:has(> .add):not(:has(.variable-item:hover)):hover > .add,
+		.settings-variable:not(:has(.settings-variable:hover)):hover
+			.settings-to-default
+	) {
+	display: inline-block;
+}
+
+.settings .settings-for-default {
+	position: relative;
+}
+
+.variable-property {
+	position: relative;
+}
+
+.variable-item > .settings-bracket {
+	cursor: pointer !important;
+}
+.settings :is(.add, .remove, .settings-bracket:has(~ .add) > span):hover {
+	cursor: pointer !important;
+}
+
+.settings-declaration {
+	color: var(--clr-settings-declaration);
+	overflow-x: auto;
+}
+.settings-property {
+	color: var(--clr-settings-property);
+	position: relative;
+}
+.settings-quote {
+	color: var(--clr-settings-quote);
+	cursor: text;
+}
+.settings-string {
+	color: var(--clr-settings-text);
+	cursor: text;
+}
+.settings-number {
+	color: var(--clr-settings-number);
+}
+.settings-boolean {
+	color: var(--clr-settings-boolean);
+}
+.settings-bracket {
+	color: var(--clr-settings-bracket);
+}
+.settings-variable {
+	color: var(--clr-settings-variable);
+}
+.settings-special {
+	color: var(--clr-settings-special);
+}
+
+.settings [style*='--depth'] {
+	padding-left: calc(var(--depth) * 1ch);
+}
+.settings .remove[style*='--depth'] {
+	padding-left: 0;
+	margin-left: calc(var(--depth) * 1ch);
+}
+
+.settings-variable {
+	padding-top: 0.125rem;
+	min-height: max-content;
+}
+.settings-variable:has([data-has-error='true'])::after {
+	content: '';
+	background-color: var(--clr-error-bg) !important;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+}
+
+.settings
+	:is(
+		.settings-variable,
+		.settings-property,
+		.variable-item,
+		.variable-property
+	) {
+	padding-bottom: 0.125rem;
+}
+
+.settings p {
+	white-space: nowrap;
+	display: inline-block;
+}
+.settings label {
+	display: inline-block;
+	white-space: nowrap;
+}
+.settings label * {
+	white-space: nowrap;
+}
+
+.settings :is(div, .settings-object) {
+	position: relative;
+}
+.settings
+	:is(div:not(.variable-item, .settings-to-default), .settings-object):not(
+		:has(
+				:is(
+						.settings-object,
+						div:not(.variable-item, .settings-to-default)
+					):hover
+			)
+	):hover::before {
+	content: '';
+	background-color: color-mix(
+		in srgb,
+		var(--clr-foreground),
+		transparent 25%
+	) !important;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: -1;
+}
+
+.settings input {
+	padding: 0 !important;
+}
+
+.settings-autocomplete:empty {
+	display: none;
+}
+
+label:has(.settings-text) {
+	cursor: text;
+}
+
+*:has(> [data-error]) {
+	position: relative;
+	z-index: 10000;
+}
+
+[data-has-error='true'] span:has(> input:not([role$='-slave'])) {
+	position: relative;
+}
+[data-has-error='true'] span:has(> input)::after {
+	content: attr(data-value);
+	position: absolute;
+	top: 0.125rem;
+	left: 0;
+	right: 0;
+	z-index: 100;
+	text-decoration: underline wavy var(--clr-error) 0.0625rem;
+	color: transparent;
+	user-select: none;
+}
+[data-has-error='true'] span:has(> input[data-type='string'])::after {
+	content: '"' attr(data-value) '"';
+}
+
+.settings :is(.error-squiggly, .select, .select *) {
+	padding: 0 !important;
+}
+
+.settings-error {
+	margin-left: 1ch;
+	--obj-top-offset: 0.25rem;
+	position: relative;
+	color: var(--clr-error);
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
 }
