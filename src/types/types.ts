@@ -51,7 +51,6 @@ export type UserChatMessage = {
 
 export type RoomSettings = {
 	roomName: string;
-	roomId: string;
 	host: string;
 	onlyHostMayDeleteActorGroups: boolean;
 	defaultLanguages: string[];
@@ -61,6 +60,7 @@ export type RoomSettings = {
 		[key: string]: {
 			color: string;
 			asPrefix?: boolean;
+			caseSensitive?: boolean;
 			aliases?: string[];
 		};
 	};

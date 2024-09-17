@@ -8,20 +8,14 @@ type ModalActions = {
 const modalActions: Record<string, ModalActions | undefined> = {};
 
 export const modal = (app: Elysia) =>
-	app.guard(
-		{
-			cookie: t.Object({ userId: t.String() }),
-			afterResponse: ({ cookie }) =>
-				(modalActions[cookie.userId.value] = undefined),
-		},
-		(app) =>
-			app
-				.post('/modal', (context) =>
-					modalActions[context.cookie.userId.value]!.onConfirm(context)
-				)
-				.delete('/modal', (context) =>
-					modalActions[context.cookie.userId.value]!.onCancel(context)
-				)
+	app.guard({ cookie: t.Object({ userId: t.String() }) }, (app) =>
+		app
+			.post('/modal', (context) =>
+				modalActions[context.cookie.userId.value]!.onConfirm(context)
+			)
+			.delete('/modal', (context) =>
+				modalActions[context.cookie.userId.value]!.onCancel(context)
+			)
 	);
 
 export default function Modal({
@@ -73,7 +67,6 @@ export default function Modal({
 							alert: {alert}
 						</small>
 					)}
-					{error && <small class='modal-error'>error: {error}</small>}
 				</div>
 				<form
 					hx-post='/modal'
@@ -82,7 +75,11 @@ export default function Modal({
 					hx-on:htmx-after-request="if (event.detail.successful) document.getElementById('modal').replaceChildren();"
 				>
 					{children as Safe}
-					<div class='buttons'>
+					{error && <small class='modal-error'>error: {error}</small>}
+					<div
+						class='buttons'
+						style={{ marginTop: error ? '0.25rem' : '1.5rem' }}
+					>
 						<button type='submit'>confirm</button>
 						<button hx-delete='/modal'>cancel</button>
 					</div>

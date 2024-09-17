@@ -436,13 +436,14 @@ input.inline {
 	justify-content: center;
 	align-items: center;
 }
-#modal .messages :first-child {	
+#modal .messages :first-child {
 	margin-bottom: 0.5rem;
 }
 #modal .buttons {
 	display: flex;
 	justify-content: space-between;
-	margin-top: 1.5rem;
+}
+#modal.modal-error .buttons {
 }
 #modal .buttons button {
 	/* width: 48%; */
@@ -461,6 +462,9 @@ input.inline {
 }
 #modal-container:has(#modal:empty) {
 	display: none;
+}
+#modal small.modal-error {
+	margin: 0.2rem 0 !important;
 }
 
 *:has(> .select) {

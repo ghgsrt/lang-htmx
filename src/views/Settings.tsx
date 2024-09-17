@@ -28,22 +28,22 @@ export function RoomSettingsView({ room }: { room: RoomController }) {
 						],
 						sync: () => room.broadcast('update:title'),
 					}),
-					roomId: s.String({
-						validate: (value) => value !== '' && !storage[value],
-						validateClient: [
-							[
-								Error.Validate.valueIsNotIncludedIn(
-									Object.keys(storage).filter((key) => key !== room.id)
-								),
-								Error.Message('a room already exists with that id'),
-							],
-							[
-								Error.Validate.valueIsNotEmpty,
-								Error.Message.propertyMustNotBeEmpty,
-							],
-						],
-						sync: room.setId,
-					}),
+					// roomId: s.String({
+					// 	validate: (value) => value !== '' && !storage[value],
+					// 	validateClient: [
+					// 		[
+					// 			Error.Validate.valueIsNotIncludedIn(
+					// 				Object.keys(storage).filter((key) => key !== room.id)
+					// 			),
+					// 			Error.Message('a room already exists with that id'),
+					// 		],
+					// 		[
+					// 			Error.Validate.valueIsNotEmpty,
+					// 			Error.Message.propertyMustNotBeEmpty,
+					// 		],
+					// 	],
+					// 	sync: room.setId,
+					// }),
 					host: s.String({
 						restrict: room.users
 							.filter((user) => user.id !== room.hostId)
@@ -91,6 +91,7 @@ export function RoomSettingsView({ room }: { room: RoomController }) {
 								tooltip:
 									'a word only has to start with the verb or an alias to count as a match',
 							}),
+							caseSensitive: s.Boolean(),
 							aliases: s.Array(s.String(), {
 								tooltip: 'additional verbs to apply the chosen color',
 								noDuplicates: true,
@@ -106,6 +107,7 @@ export function RoomSettingsView({ room }: { room: RoomController }) {
 			}
 			baseURL={URLs.room(room.id).roomSettings}
 			updateValue={() => {
+				console.log('uhh');
 				room.broadcast('update:roomSettings');
 				room.broadcast('update:chat');
 			}}

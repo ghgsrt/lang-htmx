@@ -2,7 +2,10 @@ import Html from '@kitajs/html';
 import { ValidatedInput } from '../components/Form';
 import { base } from '../controller';
 import { Safe } from '../types/types';
-import { BaseRoute, BaseValidatorRoute, URLs } from '..';
+import { BaseRoute, BaseValidatorRoute, storage, URLs } from '..';
+import Modal from '../components/Modal';
+import { byName } from '../utils';
+import { redirect } from 'elysia';
 
 export function Index(props: { children: JSX.Element }) {
 	return (
@@ -57,8 +60,8 @@ export const JoinRoom = ValidatedInput({
 	target: '#app',
 	swap: 'innerHTML',
 	name: 'roomId',
-	placeholder: 'Room Id',
-	buttonText: 'Join Room',
+	placeholder: 'room id',
+	buttonText: 'join room',
 });
 
 export function HomeView() {
@@ -69,15 +72,44 @@ export function HomeView() {
 				<main class='home'>
 					<JoinRoom isValid={false} />
 					<form
-						hx-post={'/create-room' satisfies BaseRoute}
+						hx-get={'/create-room' satisfies BaseRoute}
 						hx-trigger='submit'
 						hx-target='#app'
 					>
-						<button type='submit'>Create Room</button>
+						<button type='submit'>create room</button>
 					</form>
 				</main>
 				<Footer />
 			</>
 		</Index>
+	);
+}
+
+export function CreateRoom({ uid, error }: { uid: string; error?: string }) {
+	return (
+		<Modal
+			uid={uid}
+			message='choose a unique identifier for your room'
+			alert='this value cannot be changed later'
+			error={error}
+			target='#app'
+			onConfirm={({ body }: any) => {
+				if (body.roomId === '')
+					return <CreateRoom uid={uid} error='please provide a value' />;
+				if (storage[body.roomId])
+					return (
+						<CreateRoom uid={uid} error='a room with that id already exists' />
+					);
+
+				base.createRoom(body.roomId);
+
+				return redirect(URLs.room(body.roomId)('/'));
+			}}
+			onCancel={() => <script>{'window.location.reload()'}</script>}
+		> 
+			<label>
+				<input name='roomId' placeholder='room id' />
+			</label>
+		</Modal>
 	);
 }

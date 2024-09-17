@@ -21,7 +21,7 @@ import {
 	ChatFromActorsView,
 	ChatToActorsView,
 } from './views/Chat';
-import { JoinRoom, HomeView } from './views/Index';
+import { JoinRoom, HomeView, CreateRoom } from './views/Index';
 import { Languages, RoomView } from './views/Room';
 import {
 	CreateUser,
@@ -42,7 +42,7 @@ export const storage: Record<string, Room> = {};
 
 export const dataMap = {
 	'update:title': (room) => room.settings.roomName,
-	'update:id': (room) => room.settings.roomId,
+	'update:id': (room) => room.id,
 	'update:actors': (room) => <ActorsView room={room} />,
 	'update:users': (room) => <UsersView room={room} />,
 	'update:usersChat': (room) => <UsersChatView room={room} />,
@@ -618,7 +618,8 @@ let app = new Elysia()
 
 	.use(modal)
 
-	.post('/create-room', () => redirect(`/room/${base.createRoom()}`))
+	.get('/create-room', ({ cookie }) => <CreateRoom uid={cookie.userId.value} />)
+	// .post('/create-room', () => redirect(`/room/${base.createRoom()}`))
 	.post('/join-room', ({ body }) => redirect(`/room/${body.roomId}`), {
 		body: t.Object({ roomId: t.String() }),
 	})

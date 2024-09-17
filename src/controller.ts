@@ -263,6 +263,7 @@ const roomController = (rid: string) => {
 		if (serverUser.id !== storage[rid].hostId) return;
 		if (storage[id]) return;
 
+		storage[rid].id = id;
 		replaceKeyOrdered(storage, rid, id); //! make sure this doesn't cause massive issues lmao
 		replaceKeyOrdered(roomControllers, rid, id); //! make sure this doesn't cause massive issues lmao
 
@@ -358,8 +359,8 @@ const _controller = () => {
 		},
 	};
 	return {
-		createRoom: () => {
-			const _rid = randomUUID();
+		createRoom: (rid: string) => {
+			const _rid = rid;
 			storage[_rid] = {
 				id: _rid,
 				users: [],
@@ -367,10 +368,7 @@ const _controller = () => {
 				actorGroups: [],
 				messages: [],
 				userMessages: [],
-				settings: {
-					...deepClone(defaultRoomSettings),
-					roomId: _rid,
-				},
+				settings: { ...deepClone(defaultRoomSettings) },
 			} as any;
 
 			return _rid;
