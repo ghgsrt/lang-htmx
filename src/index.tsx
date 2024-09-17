@@ -606,7 +606,7 @@ let app = new Elysia()
 		cookie.userId.value ??= randomUUID();
 		cookie.userId.httpOnly = true;
 		cookie.userId.secure = true;
-		cookie.userId.sameSite = 'strict';
+		cookie.userId.sameSite = 'lax';
 		cookie.userId.expires = new Date(Date.now() + 86400000 * 31);
 
 		return <HomeView />;
